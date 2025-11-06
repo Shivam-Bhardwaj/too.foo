@@ -15,8 +15,34 @@ Create a single portfolio website where you can:
 ```bash
 cd /root/repos/scratchpad/projects/github-portfolio
 ./scripts/setup.sh
+cd portfolio/frontend
 npm run dev
 ```
+
+## 🌐 Deployment
+
+**Deploy with automatic DNS configuration:**
+
+```bash
+./deploy.sh
+```
+
+This will:
+1. Build the Next.js app
+2. Deploy to Vercel
+3. **Automatically configure Cloudflare DNS** for `too.foo` and `me.too.foo`
+
+**Manual DNS configuration:**
+
+```bash
+# Configure apex domain
+python3 scripts/configure-dns.py
+
+# Configure subdomain
+python3 scripts/configure-dns.py me
+```
+
+See [DNS Configuration Guide](docs/DNS_CONFIGURATION.md) for details.
 
 ## 📁 Repository Structure
 
