@@ -4,7 +4,5 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "nodeVersion": "20.x",
   "name": "too-foo"
 }
-
