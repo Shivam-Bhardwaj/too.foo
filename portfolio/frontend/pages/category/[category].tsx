@@ -22,50 +22,50 @@ type CategoryPageProps = {
 
 export default function CategoryPage({ projects, category }: CategoryPageProps) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
+    <div className="min-h-screen bg-white text-gray-900">
       <Head>
-        <title>{category} - GitHub Portfolio</title>
+        <title>{category} - too.foo</title>
       </Head>
 
-      <main className="container mx-auto px-4 py-8">
-        <Link href="/" className="text-blue-400 hover:text-blue-300 mb-6 inline-block">
-          ← Back to Portfolio
+      <nav className="border-b border-gray-200">
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <Link href="/" className="text-xl font-semibold">
+              too.foo
+            </Link>
+            <div className="flex gap-6">
+              <Link href="/" className="hover:text-gray-600">Home</Link>
+              <Link href="/me" className="hover:text-gray-600">About</Link>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <main className="container mx-auto px-6 py-12 max-w-6xl">
+        <Link href="/" className="text-gray-600 hover:text-gray-900 mb-8 inline-block">
+          ← Back
         </Link>
 
-        <h1 className="text-4xl font-bold mb-2 capitalize">{category} Projects</h1>
-        <p className="text-gray-400 mb-8">{projects.length} projects</p>
+        <h1 className="text-4xl font-bold mb-2 capitalize">{category}</h1>
+        <p className="text-gray-600 mb-8">{projects.length} projects</p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {projects.map((project) => (
             <Link key={project.id} href={`/project/${project.id}`}>
-              <div className="bg-gray-800 rounded-lg p-6 hover:bg-gray-700 transition-colors cursor-pointer border border-gray-700">
-                <div className="flex items-start justify-between mb-3">
-                  <h3 className="text-xl font-bold text-blue-400">{project.name}</h3>
-                  <span className="px-2 py-1 bg-gray-700 rounded text-sm text-gray-300">
-                    {project.language}
-                  </span>
+              <div className="border border-gray-200 rounded p-4 hover:border-gray-400 transition-colors">
+                <h3 className="font-semibold mb-2">{project.name}</h3>
+                <p className="text-sm text-gray-600 mb-3">{project.description}</p>
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  <span>{project.language || 'N/A'}</span>
                 </div>
-                <p className="text-gray-400 mb-4 line-clamp-2">{project.description}</p>
-                {project.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {project.tags.slice(0, 3).map((tag) => (
-                      <span
-                        key={tag}
-                        className="px-2 py-1 bg-gray-700 rounded text-xs text-gray-400"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
               </div>
             </Link>
           ))}
         </div>
 
         {projects.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-400 text-xl">No projects found in this category.</p>
+          <div className="text-center py-12 text-gray-500">
+            No projects found in this category.
           </div>
         )}
       </main>
@@ -99,4 +99,3 @@ export const getServerSideProps: GetServerSideProps = async ({ params }) => {
     return { notFound: true }
   }
 }
-
