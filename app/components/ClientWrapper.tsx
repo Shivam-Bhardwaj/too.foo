@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useCallback } from 'react';
 import Hero, { HeroRef } from './Hero';
 import Controls from './Controls';
 import LayerControl from './LayerControl';
@@ -9,9 +9,9 @@ export default function ClientWrapper() {
   const heroRef = useRef<HeroRef>(null);
   const [currentYear, setCurrentYear] = useState(2024.0);
 
-  const handleTimeChange = (time: number) => {
+  const handleTimeChange = useCallback((time: number) => {
     setCurrentYear(time);
-  };
+  }, []);
 
   const handleDirectionChange = (direction: 1 | -1) => {
     // Direction updates are handled internally by Controls
@@ -49,9 +49,10 @@ export default function ClientWrapper() {
         <Hero ref={heroRef} />
       </div>
       
-      {/* Header Section - Controls and Menu */}
+      {/* Header Section - Controls and Menu (one line) */}
       <header className="fixed top-0 left-0 right-0 z-30 pointer-events-none">
-        <div className="pointer-events-auto">
+        <div className="pointer-events-auto flex items-center justify-center gap-3 pt-4">
+          <LayerControl heroRef={heroRef} />
           <Controls
             heroRef={heroRef}
             onTimeChange={handleTimeChange}
@@ -59,7 +60,6 @@ export default function ClientWrapper() {
             onMotionChange={handleMotionChange}
             onPauseChange={handlePauseChange}
           />
-          <LayerControl heroRef={heroRef} />
         </div>
       </header>
 

@@ -74,7 +74,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   
   // Prevent OrbitControls from capturing clicks on UI elements
   // Check if click target is a UI element before allowing controls to handle it
-  const originalOnPointerDown = controls.addEventListener.bind(controls);
   canvas.addEventListener('pointerdown', (e: PointerEvent) => {
     const target = e.target as HTMLElement;
     // Check if clicking on a UI element (button, input, or element with data-ui attribute)
@@ -265,20 +264,24 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   ).normalize();
   
   for (let i = 0; i < ismWindCount; i++) {
-    // Start from upwind direction (positive X, spread out uniformly)
+    // Start from upwind direction (positive X in heliosphere frame, spread out uniformly)
     const spread = 8 + Math.random() * 4; // Start 8-12 units away
     const offsetY = (Math.random() - 0.5) * 6;
     const offsetZ = (Math.random() - 0.5) * 6;
     
-    // Position particles upstream
-    const startPos = new THREE.Vector3(spread, offsetY, offsetZ);
+    // Position particles upstream in heliosphere frame (X-axis points toward ISM wind)
+    const startPosLocal = new THREE.Vector3(spread, offsetY, offsetZ);
+    // Transform to world coordinates using apexBasis (heliosphere is rotated)
+    const startPos = startPosLocal.applyMatrix4(apexBasis);
     ismWindPositions[i * 3 + 0] = startPos.x;
     ismWindPositions[i * 3 + 1] = startPos.y;
     ismWindPositions[i * 3 + 2] = startPos.z;
     
-    // Flow velocity: uniform parallel flow toward heliosphere
+    // Flow velocity: uniform parallel flow toward heliosphere (in heliosphere frame, flows along -X)
     const speed = 0.015 + Math.random() * 0.01;
-    const velocity = ismFlowDirection.clone().multiplyScalar(-speed);
+    const velocityLocal = new THREE.Vector3(-speed, 0, 0); // Flow along -X in heliosphere frame
+    // Transform velocity to world coordinates
+    const velocity = velocityLocal.applyMatrix4(apexBasis);
     ismWindVelocities[i * 3 + 0] = velocity.x;
     ismWindVelocities[i * 3 + 1] = velocity.y;
     ismWindVelocities[i * 3 + 2] = velocity.z;
@@ -468,7 +471,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   let tsMidMesh: THREE.Mesh;
   let tsOuterMesh: THREE.Mesh;
   let tsHaloMesh: THREE.Mesh;
-  let tsBaseGeometry: THREE.BufferGeometry;
+  let tsBaseGeometry: THREE.BufferGeometry | undefined;
   let lastTSUpdateYear = -Infinity;
   let animationTime = 0; // Continuous animation time for pulsing effects
   
@@ -476,14 +479,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   const createTerminationShock = (year: number) => {
     // Clear existing meshes
     terminationShockGroup.clear();
-    
-    const jd = JulianDate.fromDate(new Date(Math.floor(year), 0, 1));
-    tsBaseGeometry = heliosphereModel.generateParametricSurface(
-      'terminationShock',
-      jd,
-      128 // MUCH higher resolution for smooth, blurry edges (was 64)
-    );
-    tsBaseGeometry.scale(0.03, 0.03, 0.03); // Scale AU to scene units
     
     // Calculate solar cycle phase (0-1 over 11 years)
     const solarCyclePhase = (year % 11) / 11;
@@ -495,29 +490,60 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     
     // Create MANY thin layers with VERY SMALL spacing for smooth, blurry aurora-like effect
     // Aurora effect: many overlapping layers with very low opacity and tight spacing
-    const layerCount = 12; // More layers = smoother blending
+    const layerCount = 8; // Reduced from 12 to save memory
     // Much tighter spacing between layers for smoother transitions
-    const layerScales = [1.0, 1.008, 1.016, 1.024, 1.032, 1.04, 1.048, 1.056, 1.064, 1.072, 1.08, 1.088];
+    const layerScales = [1.0, 1.01, 1.02, 1.03, 1.04, 1.05, 1.06, 1.07];
     // Smooth opacity falloff - no sharp transitions
     const layerOpacities = [
       baseOpacity * 1.0,   // Core
-      baseOpacity * 0.95, 
-      baseOpacity * 0.85,
+      baseOpacity * 0.9, 
       baseOpacity * 0.75,
-      baseOpacity * 0.65,
-      baseOpacity * 0.55,
+      baseOpacity * 0.6,
       baseOpacity * 0.45,
-      baseOpacity * 0.35,
-      baseOpacity * 0.25,
+      baseOpacity * 0.3,
       baseOpacity * 0.18,
-      baseOpacity * 0.12,
-      baseOpacity * 0.08  // Outer edge
+      baseOpacity * 0.1  // Outer edge
     ];
     
+    // Use lower resolution for memory efficiency (was 128, now 80 to prevent allocation errors)
+    const resolution = 80;
+    const jd = JulianDate.fromDate(new Date(Math.floor(year), 0, 1));
+    const generatedGeometry = heliosphereModel.generateParametricSurface(
+      'terminationShock',
+      jd,
+      resolution
+    );
+    
+    // Check if geometry was generated successfully
+    if (!generatedGeometry) {
+      console.warn('Failed to generate termination shock geometry');
+      return;
+    }
+    
+    tsBaseGeometry = generatedGeometry;
+    tsBaseGeometry.scale(0.03, 0.03, 0.03); // Scale AU to scene units
+    
     for (let i = 0; i < layerCount; i++) {
-      const layerGeometry = i === 0 ? tsBaseGeometry : tsBaseGeometry.clone();
-      if (i > 0) {
-        layerGeometry.scale(layerScales[i], layerScales[i], layerScales[i]);
+      // Ensure tsBaseGeometry exists before cloning
+      if (!tsBaseGeometry) {
+        console.error('tsBaseGeometry is undefined, cannot create layers');
+        return;
+      }
+      
+      // For first layer, use original geometry; for others, clone only when needed
+      let layerGeometry: THREE.BufferGeometry;
+      if (i === 0) {
+        layerGeometry = tsBaseGeometry;
+      } else {
+        // Clone geometry for this layer
+        try {
+          layerGeometry = tsBaseGeometry.clone();
+          layerGeometry.scale(layerScales[i], layerScales[i], layerScales[i]);
+        } catch (error) {
+          console.error(`Failed to clone geometry for layer ${i}:`, error);
+          // Fallback: reuse base geometry if clone fails
+          layerGeometry = tsBaseGeometry;
+        }
       }
       
       // Use MeshBasicMaterial with additive blending for aurora-like glow
@@ -1017,7 +1043,6 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   // ==== Animation state ====
   let currentYear = 2024.0;   // Start at current year (can be adjusted)
   let driftX = 0;              // solar-system sideways drift inside fixed heliosphere
-  let starDriftX = 0;         // starfield drift accumulator for parallax
   let direction: Direction = 1;
   let motionEnabled = true;
   
@@ -1026,8 +1051,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   // Stars represent the galactic background streaming past us
   const VELOCITY_SCALE = 0.0003; // Scaling factor for screen units/frame
   const GALACTIC_MOTION = 230;   // km/s - Sun's orbital speed around Milky Way
-  const STAR_STREAM_SPEED = 0; // Disabled to prevent drift accumulation
-  const SOLAR_DRIFT_SPEED = 0; // Disabled to prevent drift accumulation
+  
+  // Star drift: stars stream past as heliosphere moves through galaxy
+  // Heliosphere moves at ~26.3 km/s relative to local ISM
+  // This creates parallax effect - stars appear to stream past
+  // Speed: ~0.00083 AU/year (26.3 km/s ≈ 0.00083 AU/year)
+  // In scene units (1 AU = 0.03 units), this is ~0.000025 units/year
+  const STAR_STREAM_SPEED = 0.000025; // Units per year (scaled)
+  const SOLAR_DRIFT_SPEED = 0; // Disabled - solar system stays centered
 
   // Helpers
   const Z_AXIS = new THREE.Vector3(0, 0, 1);
@@ -1087,6 +1118,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
       const alpha = 0.15;
       currentYear = currentYear + (year - currentYear) * alpha;
     }
+    
+    // Calculate star drift based on time progression
+    // Stars stream past as heliosphere moves through galaxy
+    // Use year difference from initial year (2024) to calculate drift
+    const initialYear = 2024.0;
+    const yearDelta = currentYear - initialYear;
+    const starDriftX = yearDelta * STAR_STREAM_SPEED * direction;
 
     // Convert year to date for Voyager positioning
     const currentDate = new Date(Math.floor(currentYear), 0, 1);
@@ -1405,6 +1443,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
       const ismWindPos = ismWindGeo.attributes.position.array as Float32Array;
       const ismSpeedMultiplier = 1.0 + windPressure * 0.2; // ISM flow affected by solar wind pressure
       
+      // Heliosphere boundary distance (scaled)
+      const heliopauseDist = 120 * 0.03; // ~120 AU scaled
+      
       for (let i = 0; i < ismWindCount; i++) {
         const idx = i * 3;
         const pos = new THREE.Vector3(
@@ -1413,11 +1454,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
           ismWindPos[idx + 2]
         );
         
+        // Transform position to heliosphere local frame for boundary checking
+        const posLocal = pos.clone().applyMatrix4(apexBasis.clone().invert());
+        
         // Calculate distance from heliosphere center
         const dist = pos.length();
-        const heliopauseDist = 120 * 0.03; // ~120 AU scaled
+        const distLocal = posLocal.length();
         
-        // Update position with uniform flow
+        // Update position with uniform flow (velocity is already in world space)
         const vel = new THREE.Vector3(
           ismWindVelocities[idx],
           ismWindVelocities[idx + 1],
@@ -1425,26 +1469,39 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
         );
         pos.add(vel.clone().multiplyScalar(ismSpeedMultiplier));
         
-        // Deflect around heliosphere if close
-        if (dist < heliopauseDist * 1.5) {
-          const radialDir = pos.clone().normalize();
-          const dot = radialDir.dot(ismFlowDirection);
+        // Transform updated position to local frame for boundary check
+        const posLocalUpdated = pos.clone().applyMatrix4(apexBasis.clone().invert());
+        const distLocalUpdated = posLocalUpdated.length();
+        
+        // Deflect around heliosphere if close (in local frame, deflect around +X axis)
+        if (distLocalUpdated < heliopauseDist * 1.5) {
+          // In heliosphere frame, ISM flows along -X, deflect perpendicular to radial
+          const radialDirLocal = posLocalUpdated.clone().normalize();
+          const flowDirLocal = new THREE.Vector3(-1, 0, 0); // ISM flows along -X in heliosphere frame
+          const dot = radialDirLocal.dot(flowDirLocal);
           
-          // Deflection perpendicular to radial direction
-          if (dot > 0.1) {
-            const deflection = radialDir.clone()
-              .sub(ismFlowDirection.clone().multiplyScalar(dot))
+          // Deflection perpendicular to radial direction (in local frame)
+          if (dot > -0.5) { // Only deflect if approaching from upwind side
+            const deflectionLocal = radialDirLocal.clone()
+              .sub(flowDirLocal.clone().multiplyScalar(dot))
               .normalize();
             
-            const deflectionStrength = Math.exp(-(dist - heliopauseDist) / (heliopauseDist * 0.2));
-            pos.add(deflection.multiplyScalar(deflectionStrength * 0.1));
+            const deflectionStrength = Math.exp(-(distLocalUpdated - heliopauseDist) / (heliopauseDist * 0.2));
+            const deflectionWorld = deflectionLocal.applyMatrix4(apexBasis);
+            pos.add(deflectionWorld.multiplyScalar(deflectionStrength * 0.1));
           }
         }
         
-        // Reset particles that have passed through heliosphere
-        if (pos.x < -5 || dist > 15) {
+        // Reset particles that have passed through heliosphere (check in local frame)
+        // Reset if they've passed through the heliosphere (negative X in local frame) or gone too far
+        const posLocalFinal = pos.clone().applyMatrix4(apexBasis.clone().invert());
+        if (posLocalFinal.x < -5 || dist > 15) {
+          // Reset to upstream position in heliosphere frame
           const spread = 8 + Math.random() * 4;
-          pos.set(spread, (Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6);
+          const resetPosLocal = new THREE.Vector3(spread, (Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6);
+          // Transform back to world coordinates
+          const resetPos = resetPosLocal.applyMatrix4(apexBasis);
+          pos.copy(resetPos);
         }
         
         ismWindPos[idx] = pos.x;
@@ -1453,11 +1510,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
       }
       ismWindGeo.attributes.position.needsUpdate = true;
       
-      // Drift disabled to prevent accumulation issues
-      // starDriftX += STAR_STREAM_SPEED * direction;
-      
-      // Solar system drift disabled to prevent accumulation
-      // driftX += SOLAR_DRIFT_SPEED * direction;
+      // Star drift is calculated based on year delta (see above)
+      // Solar system drift disabled - heliosphere is fixed
       
       // Optional auto-panning (disabled by default - user controls camera)
       if (autoPanning) {
@@ -1473,10 +1527,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     // Update camera controls (for smooth damping)
     controls.update();
     
-    // Solar system has minimal drift within fixed heliosphere
+    // Solar system stays centered (heliosphere is fixed reference frame)
     sol.position.set(driftX, 0, 0);
     
     // Stars stream past the fixed heliosphere (showing galactic motion)
+    // Negative drift because stars move opposite to heliosphere motion
     stars.position.set(-starDriftX, 0, 0);
     famousStarsGroup.position.set(-starDriftX, 0, 0);
     

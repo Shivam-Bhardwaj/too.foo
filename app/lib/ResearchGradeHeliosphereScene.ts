@@ -603,8 +603,42 @@ export async function createResearchGradeScene(canvas: HTMLCanvasElement): Promi
         48
       );
       newTSGeometry.scale(AU_SCALE, AU_SCALE, AU_SCALE);
-      terminationShockMesh.geometry.dispose();
-      terminationShockMesh.geometry = newTSGeometry;
+      
+      // Update all termination shock layers
+      const tsCore = heliosphereGroup.getObjectByName('terminationShockCore') as THREE.Mesh;
+      const tsInner = heliosphereGroup.getObjectByName('terminationShockInner') as THREE.Mesh;
+      const tsMid = heliosphereGroup.getObjectByName('terminationShockMid') as THREE.Mesh;
+      const tsOuter = heliosphereGroup.getObjectByName('terminationShockOuter') as THREE.Mesh;
+      const tsHalo = heliosphereGroup.getObjectByName('terminationShockHalo') as THREE.Mesh;
+      
+      if (tsCore) {
+        tsCore.geometry.dispose();
+        tsCore.geometry = newTSGeometry.clone();
+      }
+      if (tsInner) {
+        tsInner.geometry.dispose();
+        const tsInnerGeo = newTSGeometry.clone();
+        tsInnerGeo.scale(1.008, 1.008, 1.008);
+        tsInner.geometry = tsInnerGeo;
+      }
+      if (tsMid) {
+        tsMid.geometry.dispose();
+        const tsMidGeo = newTSGeometry.clone();
+        tsMidGeo.scale(1.016, 1.016, 1.016);
+        tsMid.geometry = tsMidGeo;
+      }
+      if (tsOuter) {
+        tsOuter.geometry.dispose();
+        const tsOuterGeo = newTSGeometry.clone();
+        tsOuterGeo.scale(1.024, 1.024, 1.024);
+        tsOuter.geometry = tsOuterGeo;
+      }
+      if (tsHalo) {
+        tsHalo.geometry.dispose();
+        const tsHaloGeo = newTSGeometry.clone();
+        tsHaloGeo.scale(1.032, 1.032, 1.032);
+        tsHalo.geometry = tsHaloGeo;
+      }
       
       // Update heliopause
       const newHPGeometry = heliosphereModel.generateParametricSurface(

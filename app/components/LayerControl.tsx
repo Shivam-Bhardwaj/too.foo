@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { HeroRef } from './Hero';
 import { ComponentVisibility } from '../lib/heliosphereScene';
 
@@ -31,7 +30,6 @@ const LAYER_LABELS: Record<keyof ComponentVisibility, string> = {
 
 export default function LayerControl({ heroRef }: LayerControlProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const [layers, setLayers] = useState<ComponentVisibility>({
     heliosphere: true,
     helioglow: true,
@@ -51,11 +49,6 @@ export default function LayerControl({ heroRef }: LayerControlProps) {
     interstellarObjects: true,
     constellations: false,
   });
-
-  // Mount check for portal
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // Sync initial state with scene visibility
   useEffect(() => {
@@ -137,41 +130,12 @@ export default function LayerControl({ heroRef }: LayerControlProps) {
     </div>
   );
 
-  if (!mounted) return null;
-
-  // Render in a portal at body level to ensure it's above everything
-  return createPortal(
-    <>
-      {/* Invisible overlay to capture clicks and prevent canvas from intercepting */}
-      <div 
-        className="fixed top-0 left-0 w-80 h-96 pointer-events-auto z-[9998] bg-transparent" 
-        style={{ zIndex: 9998 }}
-        onMouseDown={(e) => {
-          // Only stop if not clicking on the button itself
-          if (!(e.target as HTMLElement).closest('button')) {
-            e.stopPropagation();
-          }
-        }}
-        onClick={(e) => {
-          if (!(e.target as HTMLElement).closest('button')) {
-            e.stopPropagation();
-          }
-        }}
-        onPointerDown={(e) => {
-          if (!(e.target as HTMLElement).closest('button')) {
-            e.stopPropagation();
-          }
-        }}
-      />
-      {/* Actual layer control */}
-      <div 
-        className="fixed top-4 left-4 z-[9999] pointer-events-auto" 
-        style={{ zIndex: 9999, pointerEvents: 'auto' }}
-        data-ui="layer-control"
-      >
-        {layerControlContent}
-      </div>
-    </>,
-    document.body
+  return (
+    <div 
+      className="relative pointer-events-auto" 
+      data-ui="layer-control"
+    >
+      {layerControlContent}
+    </div>
   );
 }
