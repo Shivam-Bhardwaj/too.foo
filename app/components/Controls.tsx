@@ -80,60 +80,84 @@ export default function Controls({
         cancelAnimationFrame(animationFrameRef.current);
         animationFrameRef.current = null;
       }
-      heroRef.current?.updateScene(currentYearRef.current, direction, false);
+      try {
+        heroRef.current?.updateScene(currentYearRef.current, direction, false);
+      } catch (error) {
+        console.error('Error updating scene on pause:', error);
+      }
       return;
     }
 
     let lastFrameTime = performance.now();
+    let isRunning = true;
 
     function animate(currentTime: number) {
-      const dt = (currentTime - lastFrameTime) / 1000;
-      lastFrameTime = currentTime;
-
-      // Smooth seek to target if user scrubbed
-      const current = currentYearRef.current;
-      const target = targetYearRef.current;
-      let finalYear: number;
-      
-      if (Math.abs(current - target) > 0.01) {
-        // Smooth interpolation to target year
-        const alpha = Math.min(0.15, dt * 5);
-        finalYear = current + (target - current) * alpha;
-        currentYearRef.current = finalYear;
-        setYear(finalYear);
-        onTimeChange(finalYear);
-      } else {
-        // Auto-advance time at selected speed (years per second)
-        // speed is in years/sec, dt is in seconds
-        finalYear = current + (speed * dt * direction);
-        
-        // Clamp to valid range
-        finalYear = Math.max(MIN_LOG_YEARS, Math.min(MAX_LOG_YEARS, finalYear));
-        
-        currentYearRef.current = finalYear;
-        targetYearRef.current = finalYear;
-        setYear(finalYear);
-        
-        // Update slider position to match
-        const newLogValue = yearToLinear(finalYear, MIN_LOG_YEARS, MAX_LOG_YEARS);
-        setLogSliderValue(newLogValue);
-        onTimeChange(finalYear);
+      if (!isRunning) {
+        animationFrameRef.current = null;
+        return;
       }
-      
-      // Update scene
-      heroRef.current?.updateScene(finalYear, direction, true);
 
-      animationFrameRef.current = requestAnimationFrame(animate);
+      try {
+        const dt = (currentTime - lastFrameTime) / 1000;
+        lastFrameTime = currentTime;
+
+        // Smooth seek to target if user scrubbed
+        const current = currentYearRef.current;
+        const target = targetYearRef.current;
+        let finalYear: number;
+        
+        if (Math.abs(current - target) > 0.01) {
+          // Smooth interpolation to target year
+          const alpha = Math.min(0.15, dt * 5);
+          finalYear = current + (target - current) * alpha;
+          currentYearRef.current = finalYear;
+          setYear(finalYear);
+          onTimeChange(finalYear);
+        } else {
+          // Auto-advance time at selected speed (years per second)
+          // speed is in years/sec, dt is in seconds
+          finalYear = current + (speed * dt * direction);
+          
+          // Clamp to valid range
+          finalYear = Math.max(MIN_LOG_YEARS, Math.min(MAX_LOG_YEARS, finalYear));
+          
+          currentYearRef.current = finalYear;
+          targetYearRef.current = finalYear;
+          setYear(finalYear);
+          
+          // Update slider position to match
+          const newLogValue = yearToLinear(finalYear, MIN_LOG_YEARS, MAX_LOG_YEARS);
+          setLogSliderValue(newLogValue);
+          onTimeChange(finalYear);
+        }
+        
+        // Update scene
+        heroRef.current?.updateScene(finalYear, direction, true);
+      } catch (error) {
+        console.error('Error in animation loop:', error);
+        isRunning = false;
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
+          animationFrameRef.current = null;
+        }
+        return;
+      }
+
+      if (isRunning && !reduceMotion && !paused) {
+        animationFrameRef.current = requestAnimationFrame(animate);
+      }
     }
 
     animationFrameRef.current = requestAnimationFrame(animate);
 
     return () => {
+      isRunning = false;
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
       }
     };
-  }, [reduceMotion, paused, direction, speed, onTimeChange]);
+  }, [reduceMotion, paused, direction, speed, onTimeChange, heroRef]);
 
   const handleYearChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const linearValue = parseFloat(e.target.value);

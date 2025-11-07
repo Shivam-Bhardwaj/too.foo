@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react';
+import { useEffect, useRef, useState, useImperativeHandle, forwardRef, useCallback } from 'react';
 import { createResearchGradeScene, SceneAPI, ComponentVisibility, TimeMode } from '../lib/ResearchGradeHeliosphereScene';
 import { TimeControls } from './TimeControls';
 import { DataOverlay } from './DataOverlay';
@@ -20,6 +20,9 @@ const ResearchGradeHero = forwardRef<ResearchHeroRef>((props, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneRef = useRef<SceneAPI | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const currentDateRef = useRef<Date>(new Date());
+  const timeSpeedRef = useRef<number>(11 * 365.25 / 60);
+  const resizeHandlerRef = useRef<(() => void) | null>(null);
   
   const [webglSupported, setWebglSupported] = useState(true);
   const [initFailed, setInitFailed] = useState(false);
@@ -124,6 +127,8 @@ const ResearchGradeHero = forwardRef<ResearchHeroRef>((props, ref) => {
       return;
     }
 
+    let cleanupFn: (() => void) | null = null;
+
     const initScene = async () => {
       try {
         setLoading(true);
@@ -131,27 +136,37 @@ const ResearchGradeHero = forwardRef<ResearchHeroRef>((props, ref) => {
         sceneRef.current = scene;
 
         const handleResize = () => {
-          if (canvasRef.current) {
-            const rect = canvasRef.current.getBoundingClientRect();
-            scene.resize(rect.width, rect.height);
+          if (canvasRef.current && sceneRef.current) {
+            try {
+              const rect = canvasRef.current.getBoundingClientRect();
+              sceneRef.current.resize(rect.width, rect.height);
+            } catch (error) {
+              console.error('Error in resize handler:', error);
+            }
           }
         };
 
+        resizeHandlerRef.current = handleResize;
         handleResize();
         window.addEventListener('resize', handleResize);
         
         // Initial render
         // When not playing, just update the scene without advancing time
-        scene.update(currentDate, 0, false);
+        scene.update(currentDateRef.current, 0, false);
         setLoading(false);
         if (canvasRef.current) {
           canvasRef.current.dataset.sceneReady = 'true';
         }
         window.dispatchEvent(new CustomEvent('research-scene-ready'));
 
-        return () => {
+        cleanupFn = () => {
           window.removeEventListener('resize', handleResize);
-          scene.dispose();
+          resizeHandlerRef.current = null;
+          try {
+            scene.dispose();
+          } catch (error) {
+            console.error('Error disposing scene:', error);
+          }
           sceneRef.current = null;
           if (canvasRef.current) {
             canvasRef.current.dataset.sceneReady = 'false';
@@ -168,97 +183,147 @@ const ResearchGradeHero = forwardRef<ResearchHeroRef>((props, ref) => {
     };
 
     initScene();
+
+    return () => {
+      if (cleanupFn) {
+        cleanupFn();
+      }
+    };
   }, []);
 
-  // Animation loop
+  // Update data overlay - memoized to avoid stale closures
+  const updateDataOverlay = useCallback((date: Date) => {
+    try {
+      const dataService = getAstronomicalDataService();
+      const jd = JulianDate.fromDate(date);
+      
+      // Update Voyager positions
+      const dataStore = dataService.getDataStore();
+      const v1Pos = dataStore.getSpacecraftPosition('Voyager 1', jd);
+      const v2Pos = dataStore.getSpacecraftPosition('Voyager 2', jd);
+      
+      if (v1Pos && v2Pos) {
+        setVoyagerData({
+          voyager1: {
+            name: 'Voyager 1',
+            distance: v1Pos.distance,
+            velocity: v1Pos.velocity.length(),
+            lightTime: v1Pos.lightTime / 60, // Convert to hours
+            position: { 
+              lon: VoyagerTrajectories.VOYAGER_1.current.heliocentricLongitude,
+              lat: VoyagerTrajectories.VOYAGER_1.current.heliocentricLatitude
+            },
+            status: (date.getFullYear() < 2025 ? 'active' : 'inactive') as 'active' | 'inactive',
+            lastMilestone: v1Pos.distance > 121 ? 'Interstellar space since 2012' : 
+                          v1Pos.distance > 94 ? 'Passed termination shock' : 'En route'
+          },
+          voyager2: {
+            name: 'Voyager 2',
+            distance: v2Pos.distance,
+            velocity: v2Pos.velocity.length(),
+            lightTime: v2Pos.lightTime / 60,
+            position: {
+              lon: VoyagerTrajectories.VOYAGER_2.current.heliocentricLongitude,
+              lat: VoyagerTrajectories.VOYAGER_2.current.heliocentricLatitude
+            },
+            status: (date.getFullYear() < 2030 ? 'active' : 'inactive') as 'active' | 'inactive',
+            lastMilestone: v2Pos.distance > 119 ? 'Interstellar space since 2018' : 
+                          v2Pos.distance > 83 ? 'Passed termination shock' : 'En route'
+          }
+        });
+      }
+      
+      // Update solar wind data
+      const solarWind = dataService.getSolarWindConditions(date, 1);
+      setSolarWindData({
+        speed: solarWind.speed,
+        density: solarWind.density,
+        temperature: solarWind.temperature,
+        pressure: solarWind.pressure,
+        magneticField: solarWind.magneticField.length() // Convert Vector3 to magnitude
+      });
+      
+      // Update sunspot number
+      const solarCycle = dataService.getDataStore().solarCycle;
+      if (solarCycle && solarCycle.sunspotNumber) {
+        setSunspotNumber(solarCycle.sunspotNumber.interpolate(jd));
+      }
+    } catch (error) {
+      console.error('Error updating data overlay:', error);
+    }
+  }, []);
+
+  // Animation loop - use refs to avoid dependency issues
   useEffect(() => {
-    if (!sceneRef.current) return;
+    // Update refs when state changes
+    currentDateRef.current = currentDate;
+    timeSpeedRef.current = timeSpeed;
+  }, [currentDate, timeSpeed]);
+
+  useEffect(() => {
+    if (!sceneRef.current || !isPlaying) {
+      // Cancel any running animation if not playing
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+      return;
+    }
+
+    let isRunning = true;
 
     const animate = () => {
-      if (sceneRef.current && isPlaying) {
+      if (!isRunning || !sceneRef.current || !isPlaying) {
+        animationFrameRef.current = null;
+        return;
+      }
+
+      try {
         // Update date - timeSpeed is in days per frame
         const msPerDay = 24 * 60 * 60 * 1000;
-        const newDate = new Date(currentDate.getTime() + timeSpeed * msPerDay);
+        const current = currentDateRef.current;
+        const speed = timeSpeedRef.current;
+        const newDate = new Date(current.getTime() + speed * msPerDay);
+        
+        // Update ref immediately
+        currentDateRef.current = newDate;
+        
+        // Update state (but don't depend on it in this effect)
         setCurrentDate(newDate);
         
         // Update scene
-        sceneRef.current.update(newDate, timeSpeed, true);
+        if (sceneRef.current) {
+          sceneRef.current.update(newDate, speed, true);
+        }
         
         // Update data overlay
         updateDataOverlay(newDate);
+      } catch (error) {
+        console.error('Error in animation loop:', error);
+        // Stop animation on error
+        isRunning = false;
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
+          animationFrameRef.current = null;
+        }
+        return;
       }
       
-      animationFrameRef.current = requestAnimationFrame(animate);
-    };
-
-    if (isPlaying) {
-      animate();
-    }
-
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
+      if (isRunning && isPlaying) {
+        animationFrameRef.current = requestAnimationFrame(animate);
       }
     };
-  }, [isPlaying, currentDate, timeSpeed]);
 
-  // Update data overlay
-  const updateDataOverlay = (date: Date) => {
-    const dataService = getAstronomicalDataService();
-    const jd = JulianDate.fromDate(date);
-    
-    // Update Voyager positions
-    const dataStore = dataService.getDataStore();
-    const v1Pos = dataStore.getSpacecraftPosition('Voyager 1', jd);
-    const v2Pos = dataStore.getSpacecraftPosition('Voyager 2', jd);
-    
-    if (v1Pos && v2Pos) {
-      setVoyagerData({
-        voyager1: {
-          name: 'Voyager 1',
-          distance: v1Pos.distance,
-          velocity: v1Pos.velocity.length(),
-          lightTime: v1Pos.lightTime / 60, // Convert to hours
-          position: { 
-            lon: VoyagerTrajectories.VOYAGER_1.current.heliocentricLongitude,
-            lat: VoyagerTrajectories.VOYAGER_1.current.heliocentricLatitude
-          },
-          status: (date.getFullYear() < 2025 ? 'active' : 'inactive') as 'active' | 'inactive',
-          lastMilestone: v1Pos.distance > 121 ? 'Interstellar space since 2012' : 
-                        v1Pos.distance > 94 ? 'Passed termination shock' : 'En route'
-        },
-        voyager2: {
-          name: 'Voyager 2',
-          distance: v2Pos.distance,
-          velocity: v2Pos.velocity.length(),
-          lightTime: v2Pos.lightTime / 60,
-          position: {
-            lon: VoyagerTrajectories.VOYAGER_2.current.heliocentricLongitude,
-            lat: VoyagerTrajectories.VOYAGER_2.current.heliocentricLatitude
-          },
-          status: (date.getFullYear() < 2030 ? 'active' : 'inactive') as 'active' | 'inactive',
-          lastMilestone: v2Pos.distance > 119 ? 'Interstellar space since 2018' : 
-                        v2Pos.distance > 83 ? 'Passed termination shock' : 'En route'
-        }
-      });
-    }
-    
-    // Update solar wind data
-    const solarWind = dataService.getSolarWindConditions(date, 1);
-    setSolarWindData({
-      speed: solarWind.speed,
-      density: solarWind.density,
-      temperature: solarWind.temperature,
-      pressure: solarWind.pressure,
-      magneticField: solarWind.magneticField.length() // Convert Vector3 to magnitude
-    });
-    
-    // Update sunspot number
-    const solarCycle = dataService.getDataStore().solarCycle;
-    if (solarCycle && solarCycle.sunspotNumber) {
-      setSunspotNumber(solarCycle.sunspotNumber.interpolate(jd));
-    }
-  };
+    animationFrameRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      isRunning = false;
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+    };
+  }, [isPlaying, updateDataOverlay]);
 
   // Event handlers
   const handlePlayPause = () => {
@@ -266,14 +331,20 @@ const ResearchGradeHero = forwardRef<ResearchHeroRef>((props, ref) => {
   };
 
   const handleDateChange = (date: Date) => {
+    currentDateRef.current = date;
     setCurrentDate(date);
     if (sceneRef.current) {
-      sceneRef.current.update(date, timeSpeed, false);
+      try {
+        sceneRef.current.update(date, timeSpeedRef.current, false);
+      } catch (error) {
+        console.error('Error updating scene on date change:', error);
+      }
     }
     updateDataOverlay(date);
   };
 
   const handleTimeSpeedChange = (speed: number) => {
+    timeSpeedRef.current = speed;
     setTimeSpeed(speed);
   };
 
