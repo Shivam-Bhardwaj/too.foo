@@ -29,17 +29,34 @@ if [ -f "$COMMIT_MSG_HOOK" ] && ! grep -q "format-commit-msg.sh" "$COMMIT_MSG_HO
 fi
 
 # Create commit-msg hook
-cat > "$COMMIT_MSG_HOOK" << 'EOF'
+# Get the worktree root directory
+if [ -f ".git" ]; then
+    # Worktree: find the worktree root
+    WORKTREE_ROOT=$(pwd)
+elif [ -d ".git" ]; then
+    # Regular repo
+    WORKTREE_ROOT=$(pwd)
+fi
+
+cat > "$COMMIT_MSG_HOOK" << EOF
 #!/bin/bash
 # Git commit-msg hook for metadata formatting
 
-COMMIT_MSG_FILE=$1
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+COMMIT_MSG_FILE=\$1
 
-# Run the formatter script if it exists
-if [ -f "$SCRIPT_DIR/scripts/format-commit-msg.sh" ]; then
-    "$SCRIPT_DIR/scripts/format-commit-msg.sh" "$COMMIT_MSG_FILE" "$2" "$3"
-fi
+# Try multiple paths to find the script
+SCRIPT_DIRS=(
+    "$WORKTREE_ROOT"
+    "\$(cd "\$(dirname "\${BASH_SOURCE[0]}")/../.." && pwd)"
+    "\$(git rev-parse --show-toplevel 2>/dev/null)"
+)
+
+for SCRIPT_DIR in "\${SCRIPT_DIRS[@]}"; do
+    if [ -f "\$SCRIPT_DIR/scripts/format-commit-msg.sh" ]; then
+        "\$SCRIPT_DIR/scripts/format-commit-msg.sh" "\$COMMIT_MSG_FILE" "\$2" "\$3"
+        exit 0
+    fi
+done
 
 exit 0
 EOF
