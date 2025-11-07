@@ -1,0 +1,60 @@
+# Cursor Agent Rules - Worktree Workflow
+
+## CRITICAL: Always Use Workflow Automation
+
+When the user asks you to make ANY change or create a task, you MUST follow the worktree workflow:
+
+1. **ALWAYS start by running:** `npm run task "USER'S REQUEST HERE"`
+   - This creates: issue → branch → worktree → PR
+   - Outputs the worktree path
+
+2. **ALWAYS change to the worktree directory** before making any edits:
+   ```bash
+   cd ~/.cursor/worktrees/too.foo/issue-{number}
+   ```
+
+3. **Make your changes in the worktree**, NOT in the main repo
+
+4. **Commit and push from the worktree:**
+   ```bash
+   git add .
+   git commit -m "Fix: [description]"
+   git push origin issue-{number}
+   ```
+
+## Why This Matters
+
+- ✅ Each task gets isolated worktree
+- ✅ Multiple agents can work simultaneously
+- ✅ Proper issue/PR tracking
+- ✅ Automatic preview deployments
+- ✅ No conflicts between tasks
+
+## NEVER
+
+- ❌ Edit files directly in `/root/repos/too.foo` (main repo)
+- ❌ Skip creating the issue/branch/worktree
+- ❌ Work outside the worktree directory
+
+## Examples
+
+**User says:** "Fix the button"
+**You do:**
+1. `npm run task "Fix the button"`
+2. `cd ~/.cursor/worktrees/too.foo/issue-{number}`
+3. Make changes
+4. Commit and push
+
+**User says:** "Set default speed to X"
+**You do:**
+1. `npm run task "Set default speed to X"`
+2. `cd ~/.cursor/worktrees/too.foo/issue-{number}`
+3. Make changes
+4. Commit and push
+
+## Worktree Path Format
+
+Worktrees are at: `~/.cursor/worktrees/too.foo/issue-{number}`
+
+The `npm run task` command outputs this path - use it!
+
