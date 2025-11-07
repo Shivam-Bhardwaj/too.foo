@@ -1,0 +1,111 @@
+name: Auto Create PR from Issue
+
+on:
+  issues:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number to create PR for'
+        required: true
+        type: string
+      branch_name:
+        description: 'Branch name (default: issue-{number})'
+        required: false
+        type: string
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine issue number
+        id: issue
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "issue_number=${{ github.event.inputs.issue_number }}" >> $GITHUB_OUTPUT
+          else
+            echo "issue_number=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Get issue details
+        id: issue-details
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = '${{ steps.issue.outputs.issue_number }}';
+            const issue = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber
+            });
+            
+            core.setOutput('title', issue.data.title);
+            core.setOutput('body', issue.data.body);
+            core.setOutput('labels', JSON.stringify(issue.data.labels.map(l => l.name)));
+
+      - name: Create branch
+        id: create-branch
+        run: |
+          BRANCH_NAME="${{ github.event.inputs.branch_name }}"
+          if [ -z "$BRANCH_NAME" ]; then
+            BRANCH_NAME="issue-${{ steps.issue.outputs.issue_number }}"
+          fi
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b $BRANCH_NAME
+          git push origin $BRANCH_NAME
+
+      - name: Create PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = '${{ steps.issue.outputs.issue_number }}';
+            const branchName = '${{ steps.create-branch.outputs.branch_name }}';
+            const issueTitle = '${{ steps.issue-details.outputs.title }}';
+            const issueBody = '${{ steps.issue-details.outputs.body }}';
+            
+            const pr = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Fix: ${issueTitle}`,
+              head: branchName,
+              base: 'main',
+              body: `## Related Issue
+              
+              Closes #${issueNumber}
+              
+              ## Description
+              
+              ${issueBody}
+              
+              ## Changes
+              
+              - [ ] Implementation
+              - [ ] Tests
+              - [ ] Documentation
+              
+              ---
+              *This PR was automatically created from issue #${issueNumber}*`
+            });
+            
+            console.log(`✅ PR created: #${pr.data.number}`);
+            console.log(`🔗 ${pr.data.html_url}`);
+            
+            // Link PR to issue
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: `🔗 Related PR: #${pr.data.number}`
+            });
+
