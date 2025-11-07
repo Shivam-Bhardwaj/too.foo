@@ -20,6 +20,7 @@ interface ControlsProps {
 const SPEED_PRESETS = [
   { label: '1x', value: 1 },           // 1 year/sec
   { label: '10x', value: 10 },         // 10 years/sec
+  { label: '1 cycle', value: 11 },      // 11 years/sec (1 solar cycle per second)
   { label: '100x', value: 100 },       // 100 years/sec
   { label: '1K', value: 1000 },        // 1000 years/sec
   { label: '10K', value: 10000 },      // 10,000 years/sec
@@ -38,7 +39,7 @@ export default function Controls({
   onPauseChange,
 }: ControlsProps) {
   const [year, setYear] = useState(2024.0);
-  const [speedIndex, setSpeedIndex] = useState(1); // Start at 10x
+  const [speedIndex, setSpeedIndex] = useState(2); // Start at 1 solar cycle per second (11 years/sec)
   const [direction, setDirection] = useState<Direction>(1);
   const [paused, setPaused] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
