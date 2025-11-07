@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { basisFromApex, ECLIPTIC_TILT, PHYSICAL_SCALES, HELIOSPHERE_NOSE } from "./apex";
+import { FAMOUS_STARS, raDecToCartesian } from "./starCatalog";
 
 type Direction = 1 | -1;
 
@@ -21,6 +22,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 3000);
   camera.position.set(0, 2.2, 10);
   camera.lookAt(0, 0, 0);
+  
+  // Camera panning state
+  let cameraTime = 0;
+  const cameraRadius = 12;
+  const cameraSpeed = 0.0001; // Slow panning
 
   // ===== Fixed heliosphere basis (screen +X = upwind/nose direction) =====
   // The heliosphere nose points into the interstellar wind at ecliptic λ≈255.4°, β≈5.2°
@@ -96,6 +102,30 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   }
   const stars = new THREE.Points(starGeo, starMat);
   scene.add(stars);
+  
+  // ===== Famous Stars (labeled landmarks) =====
+  const famousStarsGroup = new THREE.Group();
+  FAMOUS_STARS.forEach((star) => {
+    const [x, y, z] = raDecToCartesian(star.ra, star.dec, star.distance * 0.1); // Scale distance
+    const pos = new THREE.Vector3(x, y, z).applyMatrix4(apexBasis);
+    
+    // Create star point
+    const starGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0)]);
+    const starMat = new THREE.PointsMaterial({
+      size: 0.025 * (1 + (2.5 - star.magnitude) * 0.1), // Brighter stars are larger
+      color: star.color,
+      transparent: true,
+      opacity: 0.9,
+      sizeAttenuation: true
+    });
+    const starPoint = new THREE.Points(starGeo, starMat);
+    starPoint.position.copy(pos);
+    famousStarsGroup.add(starPoint);
+    
+    // Add label sprite (optional - can be toggled)
+    // For now, we'll just mark them with slightly larger/bright stars
+  });
+  scene.add(famousStarsGroup);
 
   // ===== Heliosphere (FIXED - comet-like teardrop shape) =====
   // The heliosphere is completely fixed in our view
@@ -201,6 +231,51 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     
     return mesh;
   })();
+  
+  // ===== Interstellar Wind Particles =====
+  // Interstellar medium flows into the heliosphere from the upwind direction (+X)
+  const ismWindCount = 1500;
+  const ismWindGeo = new THREE.BufferGeometry();
+  const ismWindPositions = new Float32Array(ismWindCount * 3);
+  const ismWindVelocities = new Float32Array(ismWindCount * 3);
+  const ismWindColors = new Float32Array(ismWindCount * 3);
+  
+  for (let i = 0; i < ismWindCount; i++) {
+    // Start from upwind direction (positive X, spread out)
+    const spread = 8 + Math.random() * 4; // Start 8-12 units away
+    const offsetY = (Math.random() - 0.5) * 6;
+    const offsetZ = (Math.random() - 0.5) * 6;
+    
+    ismWindPositions[i * 3 + 0] = spread;
+    ismWindPositions[i * 3 + 1] = offsetY;
+    ismWindPositions[i * 3 + 2] = offsetZ;
+    
+    // Flow toward heliosphere (negative X direction)
+    const speed = 0.015 + Math.random() * 0.01;
+    ismWindVelocities[i * 3 + 0] = -speed;
+    ismWindVelocities[i * 3 + 1] = (Math.random() - 0.5) * 0.002;
+    ismWindVelocities[i * 3 + 2] = (Math.random() - 0.5) * 0.002;
+    
+    // Interstellar medium color (blue-purple, cooler than solar wind)
+    ismWindColors[i * 3 + 0] = 0.6;
+    ismWindColors[i * 3 + 1] = 0.7;
+    ismWindColors[i * 3 + 2] = 1.0;
+  }
+  
+  ismWindGeo.setAttribute('position', new THREE.BufferAttribute(ismWindPositions, 3));
+  ismWindGeo.setAttribute('color', new THREE.BufferAttribute(ismWindColors, 3));
+  
+  const ismWindMat = new THREE.PointsMaterial({
+    size: 0.012,
+    transparent: true,
+    opacity: 0.5,
+    vertexColors: true,
+    sizeAttenuation: true,
+    blending: THREE.AdditiveBlending
+  });
+  
+  const ismWind = new THREE.Points(ismWindGeo, ismWindMat);
+  scene.add(ismWind);
 
   // ===== Solar system (MOVES sideways through heliosphere) =====
   const sol = new THREE.Group(); // this group will translate along +X
@@ -212,6 +287,53 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     new THREE.MeshBasicMaterial({ color: 0xfff2cc })
   );
   sol.add(sun);
+  
+  // ===== Solar Wind Particles =====
+  // Solar wind streams outward from the Sun in all directions
+  const solarWindCount = 2000;
+  const solarWindGeo = new THREE.BufferGeometry();
+  const solarWindPositions = new Float32Array(solarWindCount * 3);
+  const solarWindVelocities = new Float32Array(solarWindCount * 3);
+  const solarWindColors = new Float32Array(solarWindCount * 3);
+  const solarWindAges = new Float32Array(solarWindCount);
+  
+  for (let i = 0; i < solarWindCount; i++) {
+    // Random direction from sun
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.acos(2 * Math.random() - 1);
+    const speed = 0.02 + Math.random() * 0.03; // Solar wind speed
+    
+    solarWindVelocities[i * 3 + 0] = Math.sin(phi) * Math.cos(theta) * speed;
+    solarWindVelocities[i * 3 + 1] = Math.sin(phi) * Math.sin(theta) * speed;
+    solarWindVelocities[i * 3 + 2] = Math.cos(phi) * speed;
+    
+    // Start at sun surface
+    solarWindPositions[i * 3 + 0] = solarWindVelocities[i * 3 + 0] * 0.5;
+    solarWindPositions[i * 3 + 1] = solarWindVelocities[i * 3 + 1] * 0.5;
+    solarWindPositions[i * 3 + 2] = solarWindVelocities[i * 3 + 2] * 0.5;
+    
+    // Solar wind color (yellow-white plasma)
+    solarWindColors[i * 3 + 0] = 1.0;
+    solarWindColors[i * 3 + 1] = 0.95;
+    solarWindColors[i * 3 + 2] = 0.8;
+    
+    solarWindAges[i] = Math.random(); // Random age
+  }
+  
+  solarWindGeo.setAttribute('position', new THREE.BufferAttribute(solarWindPositions, 3));
+  solarWindGeo.setAttribute('color', new THREE.BufferAttribute(solarWindColors, 3));
+  
+  const solarWindMat = new THREE.PointsMaterial({
+    size: 0.015,
+    transparent: true,
+    opacity: 0.6,
+    vertexColors: true,
+    sizeAttenuation: true,
+    blending: THREE.AdditiveBlending
+  });
+  
+  const solarWind = new THREE.Points(solarWindGeo, solarWindMat);
+  sol.add(solarWind);
 
   // Subtle lighting for deep space - minimal ambient, directional from Sun
   scene.add(new THREE.AmbientLight(0xffffff, 0.1));  // Very subtle ambient
@@ -369,23 +491,71 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     // Planet placement (planets orbit within heliosphere)
     placePlanets(currentYear);
 
-    // HELIOSPHERE IS FIXED - we're viewing it from a distance as it moves through the galaxy
-    // Stars stream past to show our motion through the Milky Way (230 km/s orbital speed)
+    // Animate solar wind particles
     if (motionEnabled) {
+      const solarWindPos = solarWindGeo.attributes.position.array as Float32Array;
+      for (let i = 0; i < solarWindCount; i++) {
+        const idx = i * 3;
+        // Update position based on velocity
+        solarWindPos[idx + 0] += solarWindVelocities[idx + 0];
+        solarWindPos[idx + 1] += solarWindVelocities[idx + 1];
+        solarWindPos[idx + 2] += solarWindVelocities[idx + 2];
+        
+        // Reset particles that have traveled too far
+        const dist = Math.sqrt(
+          solarWindPos[idx + 0] ** 2 + 
+          solarWindPos[idx + 1] ** 2 + 
+          solarWindPos[idx + 2] ** 2
+        );
+        if (dist > 5) {
+          // Reset to sun surface
+          solarWindPos[idx + 0] = solarWindVelocities[idx + 0] * 0.5;
+          solarWindPos[idx + 1] = solarWindVelocities[idx + 1] * 0.5;
+          solarWindPos[idx + 2] = solarWindVelocities[idx + 2] * 0.5;
+        }
+      }
+      solarWindGeo.attributes.position.needsUpdate = true;
+      
+      // Animate interstellar wind particles
+      const ismWindPos = ismWindGeo.attributes.position.array as Float32Array;
+      for (let i = 0; i < ismWindCount; i++) {
+        const idx = i * 3;
+        // Update position
+        ismWindPos[idx + 0] += ismWindVelocities[idx + 0];
+        ismWindPos[idx + 1] += ismWindVelocities[idx + 1];
+        ismWindPos[idx + 2] += ismWindVelocities[idx + 2];
+        
+        // Reset particles that have passed through heliosphere
+        if (ismWindPos[idx + 0] < -5) {
+          const spread = 8 + Math.random() * 4;
+          ismWindPos[idx + 0] = spread;
+          ismWindPos[idx + 1] = (Math.random() - 0.5) * 6;
+          ismWindPos[idx + 2] = (Math.random() - 0.5) * 6;
+        }
+      }
+      ismWindGeo.attributes.position.needsUpdate = true;
+      
       // Stars stream past the fixed heliosphere (galaxy background moves)
-      // Negative direction = stars move left as we move right through galaxy
       starDriftX += STAR_STREAM_SPEED * direction;
       
       // Optional: minimal solar system drift within heliosphere (ISM interaction)
       driftX += SOLAR_DRIFT_SPEED * direction;
+      
+      // Camera panning - slow orbital motion around heliosphere
+      cameraTime += cameraSpeed;
+      const camAngle = cameraTime;
+      camera.position.x = Math.cos(camAngle) * cameraRadius;
+      camera.position.y = 2.2 + Math.sin(camAngle * 0.5) * 1.5;
+      camera.position.z = Math.sin(camAngle) * cameraRadius;
+      camera.lookAt(0, 0, 0);
     }
     
     // Solar system has minimal drift within fixed heliosphere
     sol.position.set(driftX, 0, 0);
     
     // Stars stream past the fixed heliosphere (showing galactic motion)
-    // Stars move opposite to our direction of travel through the galaxy
     stars.position.set(-starDriftX, 0, 0);
+    famousStarsGroup.position.set(-starDriftX, 0, 0);
     
     // Heliosphere stays at origin (0,0,0) - completely fixed
 

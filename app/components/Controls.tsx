@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { getPrefersReducedMotion, createMotionObserver } from '../lib/motion';
 import { HeroRef } from './Hero';
 import DateDisplay from './DateDisplay';
+import { linearToLogYear, yearToLinear, formatLogTime, yearsToSeconds } from '../lib/timeScale';
 
 type Direction = 1 | -1;
 
@@ -15,18 +16,19 @@ interface ControlsProps {
   onPauseChange: (paused: boolean) => void;
 }
 
-// Speed presets: years per second
+// Speed presets: years per second (logarithmic scale)
 const SPEED_PRESETS = [
   { label: '1x', value: 1 },           // 1 year/sec
   { label: '10x', value: 10 },         // 10 years/sec
-  { label: '100x', value: 100 },       // 100 years/sec (century/sec)
+  { label: '100x', value: 100 },       // 100 years/sec
   { label: '1K', value: 1000 },        // 1000 years/sec
   { label: '10K', value: 10000 },      // 10,000 years/sec
   { label: '100K', value: 100000 },    // 100,000 years/sec
 ];
 
-const MIN_YEAR = 2000;
-const MAX_YEAR = 2100;
+// Logarithmic time range: 0.001 years to 1 million years
+const MIN_LOG_YEARS = 0.001;
+const MAX_LOG_YEARS = 1000000;
 
 export default function Controls({
   heroRef,
@@ -45,6 +47,9 @@ export default function Controls({
   const currentYearRef = useRef(2024.0);
   const targetYearRef = useRef(2024.0);
   const animationFrameRef = useRef<number | null>(null);
+  
+  // Logarithmic slider value (0-1)
+  const [logSliderValue, setLogSliderValue] = useState(yearToLinear(2024.0, MIN_LOG_YEARS, MAX_LOG_YEARS));
 
   const speed = SPEED_PRESETS[speedIndex].value;
 
@@ -99,11 +104,15 @@ export default function Controls({
         setYear(finalYear);
         onTimeChange(finalYear);
       } else {
-        // Auto-advance time at selected speed
-        finalYear = current + (dt * speed * direction);
+        // Auto-advance time at selected speed (logarithmic)
+        const currentLog = yearToLinear(current, MIN_LOG_YEARS, MAX_LOG_YEARS);
+        const speedInLogSpace = (speed / MAX_LOG_YEARS) * dt * direction;
+        const newLogValue = Math.max(0, Math.min(1, currentLog + speedInLogSpace));
+        finalYear = linearToLogYear(newLogValue, MIN_LOG_YEARS, MAX_LOG_YEARS);
         currentYearRef.current = finalYear;
         targetYearRef.current = finalYear;
         setYear(finalYear);
+        setLogSliderValue(newLogValue);
         onTimeChange(finalYear);
       }
       
@@ -123,10 +132,12 @@ export default function Controls({
   }, [reduceMotion, paused, direction, speed, onTimeChange]);
 
   const handleYearChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseFloat(e.target.value);
+    const linearValue = parseFloat(e.target.value);
+    const value = linearToLogYear(linearValue, MIN_LOG_YEARS, MAX_LOG_YEARS);
     targetYearRef.current = value;
     currentYearRef.current = value;
     setYear(value);
+    setLogSliderValue(linearValue);
     onTimeChange(value);
     heroRef.current?.updateScene(value, direction, !reduceMotion && !paused);
   };
@@ -171,7 +182,6 @@ export default function Controls({
   };
 
   const motionDisabled = reduceMotion || paused;
-  const yearPercent = ((year - MIN_YEAR) / (MAX_YEAR - MIN_YEAR)) * 100;
 
   useEffect(() => {
     if (!heroRef.current) return;
@@ -189,27 +199,27 @@ export default function Controls({
         role="region"
         aria-label="Simulation controls">
         
-        {/* Year Slider */}
+        {/* Logarithmic Time Slider */}
         <div className="flex flex-col gap-1">
           <label htmlFor="year-slider" className="text-xs text-white/70">
-            Year: {Math.floor(year).toFixed(0)}
+            Time: {formatLogTime(yearsToSeconds(year))}
           </label>
           <input
             id="year-slider"
             ref={sliderRef}
             type="range"
-            min={MIN_YEAR}
-            max={MAX_YEAR}
-            step="0.1"
-            value={year}
+            min="0"
+            max="1"
+            step="0.001"
+            value={logSliderValue}
             onChange={handleYearChange}
             onKeyDown={handleSliderKeyDown}
             disabled={motionDisabled}
-            aria-label="Year"
-            title="Scrub through years"
+            aria-label="Time (logarithmic scale)"
+            title="Scrub through time (logarithmic scale)"
             className="w-48 h-1.5 bg-white/20 rounded-lg appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-white/50"
             style={{
-              background: `linear-gradient(to right, #ffffff 0%, #ffffff ${yearPercent}%, rgba(255, 255, 255, 0.2) ${yearPercent}%, rgba(255, 255, 255, 0.2) 100%)`,
+              background: `linear-gradient(to right, #ffffff 0%, #ffffff ${logSliderValue * 100}%, rgba(255, 255, 255, 0.2) ${logSliderValue * 100}%, rgba(255, 255, 255, 0.2) 100%)`,
             }}
           />
         </div>

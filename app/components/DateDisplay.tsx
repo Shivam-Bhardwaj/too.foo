@@ -1,26 +1,16 @@
 'use client';
 
+import { formatLogTime, yearsToSeconds } from '../lib/timeScale';
+
 interface DateDisplayProps {
   year: number;
   speed: number; // years per second
 }
 
 export default function DateDisplay({ year, speed }: DateDisplayProps) {
-  // Format year with decimal precision
-  const formatYear = (y: number): string => {
-    const wholeYear = Math.floor(y);
-    const fraction = y - wholeYear;
-    const days = Math.floor(fraction * 365.25);
-    const date = new Date(wholeYear, 0, 1);
-    date.setDate(date.getDate() + days);
-    
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const month = monthNames[date.getMonth()];
-    const day = date.getDate();
-    
-    return `${wholeYear} ${month} ${day}`;
-  };
-
+  // Format time with appropriate units (logarithmic scale)
+  const timeDisplay = formatLogTime(yearsToSeconds(year));
+  
   // Format speed display
   const formatSpeed = (s: number): string => {
     if (s < 1) {
@@ -38,7 +28,7 @@ export default function DateDisplay({ year, speed }: DateDisplayProps) {
     <div className="fixed top-4 left-4 z-50 bg-black/60 backdrop-blur-sm border border-white/20 rounded-lg px-4 py-3 shadow-lg">
       <div className="flex flex-col gap-1">
         <div className="text-2xl font-mono font-light text-white">
-          {formatYear(year)}
+          {timeDisplay}
         </div>
         <div className="text-xs text-white/60">
           Speed: {formatSpeed(speed)}

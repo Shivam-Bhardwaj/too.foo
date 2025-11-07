@@ -43,17 +43,17 @@ export default function Home() {
           />
         </noscript>
 
-        {/* Content - Foreground layer (on top) */}
-        <div className="relative z-20 text-center max-w-4xl mx-auto">
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-light mb-6 text-cosmic-cyan/90 clamp-text">
+        {/* Content - Foreground layer (on top, positioned to avoid heliosphere) */}
+        <div className="relative z-20 text-center max-w-4xl mx-auto px-4" style={{ marginTop: '-10vh' }}>
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-light mb-6 text-white/95 clamp-text drop-shadow-lg">
             too.foo — Solar Memory Online
           </h1>
-          <p className="text-lg md:text-xl lg:text-2xl text-cosmic-cyan/70 mb-8 max-w-2xl mx-auto">
+          <p className="text-lg md:text-xl lg:text-2xl text-white/80 mb-8 max-w-2xl mx-auto drop-shadow-md">
             Uploading before GTA 6. Learning the tech and philosophy to encode our planet's DNA.
           </p>
           <a
             href="#manifesto"
-            className="inline-block text-sm text-cosmic-cyan/60 hover:text-cosmic-cyan/80 transition-colors underline underline-offset-4"
+            className="inline-block text-sm text-white/70 hover:text-white/90 transition-colors underline underline-offset-4 drop-shadow-sm"
           >
             Read the Manifesto soon →
           </a>
