@@ -4,14 +4,20 @@
 
 set -e
 
-HOOKS_DIR=".git/hooks"
-COMMIT_MSG_HOOK="$HOOKS_DIR/commit-msg"
-
-# Check if we're in a git repository
-if [ ! -d ".git" ]; then
+# Handle both regular repos and worktrees
+if [ -f ".git" ]; then
+    # Worktree: .git is a file pointing to the worktree gitdir
+    GIT_DIR=$(cat .git | sed 's/gitdir: //')
+    HOOKS_DIR="$GIT_DIR/hooks"
+elif [ -d ".git" ]; then
+    # Regular repo
+    HOOKS_DIR=".git/hooks"
+else
     echo "Error: Not in a git repository"
     exit 1
 fi
+
+COMMIT_MSG_HOOK="$HOOKS_DIR/commit-msg"
 
 # Create hooks directory if it doesn't exist
 mkdir -p "$HOOKS_DIR"
