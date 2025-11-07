@@ -1,0 +1,138 @@
+name: Complete Workflow - Issue to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      task_description:
+        description: 'Description of the task/change needed'
+        required: true
+        type: string
+      labels:
+        description: 'Comma-separated labels'
+        required: false
+        type: string
+        default: 'enhancement'
+
+jobs:
+  create-issue-and-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Issue
+        id: create-issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `Task: ${new Date().toISOString().split('T')[0]} - User Request`;
+            const body = `${{ github.event.inputs.task_description }}
+
+---
+*Created automatically via workflow dispatch*`;
+            const labels = '${{ github.event.inputs.labels }}'.split(',').map(l => l.trim()).filter(l => l);
+            
+            const issue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: labels
+            });
+            
+            console.log(`✅ Issue created: #${issue.data.number}`);
+            console.log(`🔗 ${issue.data.html_url}`);
+            
+            core.setOutput('issue_number', issue.data.number);
+            core.setOutput('issue_url', issue.data.html_url);
+
+      - name: Create branch
+        id: create-branch
+        run: |
+          BRANCH_NAME="issue-${{ steps.create-issue.outputs.issue_number }}"
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b $BRANCH_NAME
+          # Create a placeholder commit to establish the branch
+          git commit --allow-empty -m "Initial commit for issue #${{ steps.create-issue.outputs.issue_number }}"
+          git push origin $BRANCH_NAME
+
+      - name: Create PR
+        id: create-pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = '${{ steps.create-issue.outputs.issue_number }}';
+            const branchName = '${{ steps.create-branch.outputs.branch_name }}';
+            
+            const issue = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber
+            });
+            
+            const pr = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Fix: ${issue.data.title}`,
+              head: branchName,
+              base: 'main',
+              body: `## Related Issue
+              
+              Closes #${issueNumber}
+              
+              ## Description
+              
+              ${issue.data.body}
+              
+              ## Status
+              
+              - [ ] Implementation
+              - [ ] Tests
+              - [ ] Documentation
+              - [ ] Ready for review
+              
+              ---
+              *This PR was automatically created from issue #${issueNumber}*
+              
+              **Next steps:**
+              1. Make your changes on branch \`${branchName}\`
+              2. Push your changes
+              3. Vercel will automatically create a preview deployment
+              4. Once reviewed and merged, it will deploy to production automatically`
+            });
+            
+            console.log(`✅ PR created: #${pr.data.number}`);
+            console.log(`🔗 ${pr.data.html_url}`);
+            
+            // Link PR to issue
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: `🔗 Related PR: #${pr.data.number} - ${pr.data.html_url}`
+            });
+            
+            core.setOutput('pr_number', pr.data.number);
+            core.setOutput('pr_url', pr.data.html_url);
+
+      - name: Summary
+        run: |
+          echo "## 🎉 Workflow Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Issue created: #${{ steps.create-issue.outputs.issue_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "✅ PR created: #${{ steps.create-pr.outputs.pr_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Next Steps:**" >> $GITHUB_STEP_SUMMARY
+          echo "1. Work on branch: \`${{ steps.create-branch.outputs.branch_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "2. Push your changes" >> $GITHUB_STEP_SUMMARY
+          echo "3. Vercel will create a preview deployment automatically" >> $GITHUB_STEP_SUMMARY
+          echo "4. Merge PR to deploy to production" >> $GITHUB_STEP_SUMMARY
+
