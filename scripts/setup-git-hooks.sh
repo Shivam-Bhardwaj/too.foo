@@ -7,11 +7,14 @@ set -e
 # Handle both regular repos and worktrees
 if [ -f ".git" ]; then
     # Worktree: .git is a file pointing to the worktree gitdir
-    GIT_DIR=$(cat .git | sed 's/gitdir: //')
-    HOOKS_DIR="$GIT_DIR/hooks"
+    # For worktrees, hooks go in the main repo's .git/hooks
+    MAIN_GIT_DIR=$(git rev-parse --git-common-dir 2>/dev/null || git rev-parse --git-dir 2>/dev/null)
+    HOOKS_DIR="$MAIN_GIT_DIR/hooks"
+    WORKTREE_ROOT=$(git rev-parse --show-toplevel)
 elif [ -d ".git" ]; then
     # Regular repo
     HOOKS_DIR=".git/hooks"
+    WORKTREE_ROOT=$(pwd)
 else
     echo "Error: Not in a git repository"
     exit 1
