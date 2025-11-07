@@ -177,12 +177,15 @@ export async function createResearchGradeScene(canvas: HTMLCanvasElement): Promi
   );
   terminationShockGeometry.scale(AU_SCALE, AU_SCALE, AU_SCALE);
   
-  const terminationShockMaterial = new THREE.MeshBasicMaterial({
+  const terminationShockMaterial = new THREE.MeshPhongMaterial({
     color: 0xff8844,
+    emissive: 0x331100, // Subtle orange glow
     transparent: true,
-    opacity: 0.2,
+    opacity: 0.4, // Increased for better visibility
     wireframe: true,
-    side: THREE.DoubleSide
+    side: THREE.DoubleSide,
+    shininess: 30,
+    specular: 0x442200 // Warm specular highlight
   });
   
   const terminationShockMesh = new THREE.Mesh(terminationShockGeometry, terminationShockMaterial);

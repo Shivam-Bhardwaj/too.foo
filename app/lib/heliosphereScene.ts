@@ -452,12 +452,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     48
   );
   tsGeometry.scale(0.03, 0.03, 0.03); // Scale AU to scene units
-  const tsMaterial = new THREE.MeshBasicMaterial({
+  const tsMaterial = new THREE.MeshPhongMaterial({
     color: 0xffaa44,
+    emissive: 0x331100, // Subtle orange glow
     transparent: true,
-    opacity: 0.15,
+    opacity: 0.4, // Increased for better visibility
     wireframe: true,
-    side: THREE.DoubleSide
+    side: THREE.DoubleSide,
+    shininess: 30,
+    specular: 0x442200 // Warm specular highlight
   });
   const terminationShock = new THREE.Mesh(tsGeometry, tsMaterial);
   terminationShock.setRotationFromMatrix(apexBasis);
