@@ -169,7 +169,7 @@ export async function createResearchGradeScene(canvas: HTMLCanvasElement): Promi
   // Get heliosphere model
   const heliosphereModel = dataService.getHeliosphereModel();
   
-  // Termination shock
+  // Termination shock - using volumetric glow effect instead of wireframe
   const terminationShockGeometry = heliosphereModel.generateParametricSurface(
     'terminationShock',
     JulianDate.fromDate(currentDate),
@@ -177,21 +177,51 @@ export async function createResearchGradeScene(canvas: HTMLCanvasElement): Promi
   );
   terminationShockGeometry.scale(AU_SCALE, AU_SCALE, AU_SCALE);
   
-  const terminationShockMaterial = new THREE.MeshPhongMaterial({
+  // Main volumetric glow layer - looks like glowing plasma/energy field
+  const terminationShockVolumetricMaterial = new THREE.MeshPhysicalMaterial({
     color: 0xff8844,
-    emissive: 0x331100, // Subtle orange glow
+    emissive: 0xff6600, // Strong orange glow
+    emissiveIntensity: 0.8,
     transparent: true,
-    opacity: 0.4, // Increased for better visibility
-    wireframe: true,
+    opacity: 0.15,
     side: THREE.DoubleSide,
-    shininess: 30,
-    specular: 0x442200 // Warm specular highlight
+    roughness: 0.9,
+    metalness: 0.0,
+    transmission: 0.95, // Highly transparent
+    thickness: 0.2,
+    ior: 1.1
   });
+  const terminationShockVolumetric = new THREE.Mesh(terminationShockGeometry, terminationShockVolumetricMaterial);
+  terminationShockVolumetric.setRotationFromMatrix(apexBasis);
+  terminationShockVolumetric.name = 'terminationShockVolumetric';
+  heliosphereGroup.add(terminationShockVolumetric);
   
-  const terminationShockMesh = new THREE.Mesh(terminationShockGeometry, terminationShockMaterial);
-  terminationShockMesh.setRotationFromMatrix(apexBasis);
-  terminationShockMesh.name = 'terminationShock';
-  heliosphereGroup.add(terminationShockMesh);
+  // Outer glow halo for depth
+  const tsGlowGeometry = terminationShockGeometry.clone();
+  tsGlowGeometry.scale(1.05, 1.05, 1.05);
+  const tsGlowMaterial = new THREE.MeshBasicMaterial({
+    color: 0xff6600,
+    transparent: true,
+    opacity: 0.08,
+    side: THREE.DoubleSide
+  });
+  const terminationShockGlow = new THREE.Mesh(tsGlowGeometry, tsGlowMaterial);
+  terminationShockGlow.setRotationFromMatrix(apexBasis);
+  terminationShockGlow.name = 'terminationShockGlow';
+  heliosphereGroup.add(terminationShockGlow);
+  
+  // Edge highlights using EdgesGeometry for subtle structure definition
+  const tsEdgesGeometry = new THREE.EdgesGeometry(terminationShockGeometry, 15);
+  const tsEdgesMaterial = new THREE.LineBasicMaterial({
+    color: 0xffaa44,
+    transparent: true,
+    opacity: 0.25,
+    linewidth: 1
+  });
+  const terminationShockEdges = new THREE.LineSegments(tsEdgesGeometry, tsEdgesMaterial);
+  terminationShockEdges.setRotationFromMatrix(apexBasis);
+  terminationShockEdges.name = 'terminationShockEdges';
+  heliosphereGroup.add(terminationShockEdges);
   
   // Heliopause
   const heliopauseGeometry = heliosphereModel.generateParametricSurface(
