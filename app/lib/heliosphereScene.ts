@@ -493,6 +493,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   // ===== AU Distance Markers =====
   const distanceMarkersGroup = new THREE.Group();
   distanceMarkersGroup.name = 'distanceMarkers';
+  distanceMarkersGroup.visible = false; // Hidden by default - removed as meaningless artifact
   scene.add(distanceMarkersGroup);
   
   const markerDistances = [1, 5, 10, 20, 30, 50, 100, 150]; // AU
@@ -514,6 +515,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   // ===== Solar Apex Direction Indicator =====
   const solarApexGroup = new THREE.Group();
   solarApexGroup.name = 'solarApex';
+  solarApexGroup.visible = false; // Hidden by default - removed as meaningless artifact
   scene.add(solarApexGroup);
   
   // Solar apex: RA 18h 28m (277°), Dec +30°
@@ -604,6 +606,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   // ===== Interstellar Objects =====
   const interstellarObjectsGroup = new THREE.Group();
   interstellarObjectsGroup.name = 'interstellarObjects';
+  interstellarObjectsGroup.visible = false; // Hidden by default - removed as meaningless artifacts
   scene.add(interstellarObjectsGroup);
   
   // 'Oumuamua
@@ -919,10 +922,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     stars: true,
     famousStars: true,
     voyagers: true,
-    distanceMarkers: true,
-    solarApex: true,
+    distanceMarkers: false, // Hidden by default - removed as meaningless artifact
+    solarApex: false, // Hidden by default - removed as meaningless artifact
     labels: true,
-    interstellarObjects: true,
+    interstellarObjects: false, // Hidden by default - removed as meaningless artifacts
     constellations: false,
   };
   
