@@ -68,12 +68,14 @@ export function TimeControls({
     onDateChange(newDate);
   };
   
-  // Predefined speeds
+  // Predefined speeds (days per frame at 60fps)
   const speeds = [
     { label: '1 day/s', value: 1/60 },
     { label: '1 month/s', value: 30/60 },
-    { label: '1 year/s', value: 365/60 },
-    { label: '10 years/s', value: 3650/60 },
+    { label: '1 year/s', value: 365.25/60 },
+    { label: '11 years/s', value: 11 * 365.25/60 }, // 1 solar cycle per second
+    { label: '100 years/s', value: 100 * 365.25/60 },
+    { label: '1000 years/s', value: 1000 * 365.25/60 },
   ];
   
   // Key milestones
