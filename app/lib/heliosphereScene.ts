@@ -50,7 +50,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   // We're viewing from a distance: heliosphere is fixed, stars stream past
   // Distribution based on Gaia catalog statistics for solar neighborhood
   const starMat = new THREE.PointsMaterial({ 
-    size: 0.012,  // Sharper, more realistic star size
+    size: 0.018,  // Larger, more visible stars
     transparent: true, 
     opacity: 1.0,
     sizeAttenuation: true,  // Stars get smaller with distance
@@ -125,10 +125,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     // Create star point
     const starGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0)]);
     const starMat = new THREE.PointsMaterial({
-      size: 0.025 * (1 + (2.5 - star.magnitude) * 0.1), // Brighter stars are larger
+      size: 0.035 * (1 + (2.5 - star.magnitude) * 0.15), // Larger, brighter stars
       color: star.color,
       transparent: true,
-      opacity: 0.9,
+      opacity: 1.0,  // Fully opaque
       sizeAttenuation: true
     });
     const starPoint = new THREE.Points(starGeo, starMat);
@@ -212,16 +212,16 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     
     const g = createTeardropGeometry();
     
-    // Realistic heliosphere material - subtle glow from helioglow effect
+    // Realistic heliosphere material - brighter for visibility
     const m = new THREE.MeshPhysicalMaterial({
-      color: new THREE.Color(0x0a1a2e),  // Very dark blue-grey
-      emissive: new THREE.Color(0x040810), // Subtle helioglow
-      transmission: 0.85,  // Less transparent for more presence
+      color: new THREE.Color(0x2a4a6e),  // Brighter blue-grey
+      emissive: new THREE.Color(0x1a2a4a), // Brighter helioglow
+      transmission: 0.75,  // Less transparent for more presence
       thickness: 0.4,
-      roughness: 0.98,
+      roughness: 0.95,
       metalness: 0.0,
       transparent: true,
-      opacity: 0.25,  // More subtle
+      opacity: 0.5,  // Much more visible
       side: THREE.DoubleSide
     });
     
@@ -229,13 +229,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     mesh.setRotationFromMatrix(apexBasis); // nose → +X (upwind direction)
     scene.add(mesh);
     
-    // Add subtle helioglow effect (faint emission from UV interactions)
+    // Add brighter helioglow effect (faint emission from UV interactions)
     const glowGeometry = g.clone();
     glowGeometry.scale(1.15, 1.15, 1.15); // Slightly larger
     const glowMaterial = new THREE.MeshBasicMaterial({
-      color: new THREE.Color(0x1a2a4a),
+      color: new THREE.Color(0x3a5a7a),
       transparent: true,
-      opacity: 0.08,
+      opacity: 0.2,  // More visible glow
       side: THREE.DoubleSide
     });
     const glow = new THREE.Mesh(glowGeometry, glowMaterial);
@@ -279,9 +279,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   ismWindGeo.setAttribute('color', new THREE.BufferAttribute(ismWindColors, 3));
   
   const ismWindMat = new THREE.PointsMaterial({
-    size: 0.012,
+    size: 0.020,  // Larger particles
     transparent: true,
-    opacity: 0.5,
+    opacity: 0.8,  // Much brighter
     vertexColors: true,
     sizeAttenuation: true,
     blending: THREE.AdditiveBlending
@@ -295,11 +295,25 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   scene.add(sol);
 
   // Sun
-  const sun = new THREE.Mesh(
-    new THREE.SphereGeometry(0.45, 32, 32),
-    new THREE.MeshBasicMaterial({ color: 0xfff2cc })
-  );
+  const sunGeometry = new THREE.SphereGeometry(0.45, 32, 32);
+  const sunMaterial = new THREE.MeshStandardMaterial({ 
+    color: 0xffffaa,  // Brighter yellow-white
+    emissive: 0xffaa44,  // Add emissive glow
+    emissiveIntensity: 1.5
+  });
+  const sun = new THREE.Mesh(sunGeometry, sunMaterial);
   sol.add(sun);
+  
+  // Sun glow/halo
+  const sunGlowGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+  const sunGlowMaterial = new THREE.MeshBasicMaterial({
+    color: 0xffaa44,
+    transparent: true,
+    opacity: 0.3,
+    side: THREE.DoubleSide
+  });
+  const sunGlow = new THREE.Mesh(sunGlowGeometry, sunGlowMaterial);
+  sol.add(sunGlow);
   
   // ===== Solar Wind Particles =====
   // Solar wind streams outward from the Sun in all directions
@@ -337,9 +351,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   solarWindGeo.setAttribute('color', new THREE.BufferAttribute(solarWindColors, 3));
   
   const solarWindMat = new THREE.PointsMaterial({
-    size: 0.015,
+    size: 0.025,  // Larger particles
     transparent: true,
-    opacity: 0.6,
+    opacity: 0.9,  // Much brighter
     vertexColors: true,
     sizeAttenuation: true,
     blending: THREE.AdditiveBlending
@@ -348,14 +362,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   const solarWind = new THREE.Points(solarWindGeo, solarWindMat);
   sol.add(solarWind);
 
-  // Subtle lighting for deep space - minimal ambient, directional from Sun
-  scene.add(new THREE.AmbientLight(0xffffff, 0.1));  // Very subtle ambient
-  const sunLight = new THREE.DirectionalLight(0xfff2cc, 0.4);  // Warm sunlight
+  // Brighter lighting for better visibility
+  scene.add(new THREE.AmbientLight(0xffffff, 0.3));  // Increased ambient
+  const sunLight = new THREE.DirectionalLight(0xffffaa, 0.8);  // Brighter sunlight
   sunLight.position.set(2, 1, 2);
   scene.add(sunLight);
   
-  // Add subtle fill light for heliosphere visibility
-  const fillLight = new THREE.DirectionalLight(0x4a5a7a, 0.15);
+  // Add brighter fill light for heliosphere visibility
+  const fillLight = new THREE.DirectionalLight(0x6a7a9a, 0.3);
   fillLight.position.set(-2, -1, -2);
   scene.add(fillLight);
   
@@ -435,29 +449,112 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     Neptune: 164.8
   } as const;
 
-  // Create planets + orbits
+  // Create planets + orbits with more realistic materials
   const planetMeshes: Record<string, THREE.Mesh> = {};
+  const earthMeshRef: { current: THREE.Mesh | null } = { current: null };
+  
   Object.entries(PLANET_RADII).forEach(([name, R]) => {
     makeOrbit(R);
-    const color =
-      name === "Mars" ? 0xd36b4d :
-      name === "Venus" ? 0xe6d8b0 :
-      name === "Jupiter" ? 0xd9c3a5 :
-      name === "Saturn" ? 0xd8c7a6 :
-      name === "Uranus" ? 0x9fd4e8 :
-      name === "Neptune" ? 0x88a6f2 :
-      name === "Mercury" ? 0xbfb7ae :
-      0x7fbfff; // Earth
+    
+    // More realistic planet colors and materials
+    let color, emissive, metalness, roughness;
+    const size = name === "Jupiter" ? 0.12 : name === "Saturn" ? 0.11 : 0.08;
+    
+    switch(name) {
+      case "Mercury":
+        color = 0x8c7853;
+        emissive = 0x000000;
+        metalness = 0.1;
+        roughness = 0.9;
+        break;
+      case "Venus":
+        color = 0xffc649;
+        emissive = 0x332200;
+        metalness = 0.0;
+        roughness = 0.95;
+        break;
+      case "Earth":
+        color = 0x4a90e2;
+        emissive = 0x001122;
+        metalness = 0.0;
+        roughness = 0.7;
+        break;
+      case "Mars":
+        color = 0xcd5c5c;
+        emissive = 0x000000;
+        metalness = 0.1;
+        roughness = 0.9;
+        break;
+      case "Jupiter":
+        color = 0xd8ca9d;
+        emissive = 0x221100;
+        metalness = 0.0;
+        roughness = 0.8;
+        break;
+      case "Saturn":
+        color = 0xfad5a5;
+        emissive = 0x221100;
+        metalness = 0.0;
+        roughness = 0.85;
+        break;
+      case "Uranus":
+        color = 0x4fd0e7;
+        emissive = 0x001122;
+        metalness = 0.0;
+        roughness = 0.9;
+        break;
+      case "Neptune":
+        color = 0x4166f5;
+        emissive = 0x000011;
+        metalness = 0.0;
+        roughness = 0.9;
+        break;
+      default:
+        color = 0x888888;
+        emissive = 0x000000;
+        metalness = 0.0;
+        roughness = 0.95;
+    }
+    
     const mesh = new THREE.Mesh(
-      new THREE.SphereGeometry(name === "Jupiter" ? 0.12 : name === "Saturn" ? 0.11 : 0.08, 16, 16),
-      new THREE.MeshStandardMaterial({ color, metalness: 0, roughness: 0.95 })
+      new THREE.SphereGeometry(size, 32, 32), // More segments for smoother appearance
+      new THREE.MeshStandardMaterial({ 
+        color, 
+        emissive,
+        metalness, 
+        roughness 
+      })
     );
     mesh.userData.radius = R;
     mesh.userData.period = PERIOD_Y[name as keyof typeof PERIOD_Y];
     mesh.rotation.z = ECLIPTIC_TILT;
     sol.add(mesh);
     planetMeshes[name] = mesh;
+    
+    // Store Earth reference for Moon
+    if (name === "Earth") {
+      earthMeshRef.current = mesh;
+    }
   });
+  
+  // ===== Moon orbiting Earth =====
+  const moonGroup = new THREE.Group();
+  sol.add(moonGroup);
+  
+  const moonGeometry = new THREE.SphereGeometry(0.02, 16, 16);
+  const moonMaterial = new THREE.MeshStandardMaterial({
+    color: 0xaaaaaa,
+    emissive: 0x000000,
+    metalness: 0.0,
+    roughness: 0.9
+  });
+  const moon = new THREE.Mesh(moonGeometry, moonMaterial);
+  moonGroup.add(moon);
+  
+  // Moon orbit radius (relative to Earth)
+  const MOON_ORBIT_RADIUS = 0.15;
+  const MOON_PERIOD_DAYS = 27.32; // Sidereal month in days
+  const MOON_PERIOD_YEARS = MOON_PERIOD_DAYS / 365.25;
 
   // ==== Animation state ====
   let currentYear = 2024.0;   // Start at current year (can be adjusted)
@@ -480,6 +577,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   function placePlanets(year: number) {
     // Calculate planet positions based on actual year
     // Each planet's angle = (year / period) * 2π
+    let earthPosition = new THREE.Vector3();
+    
     Object.entries(planetMeshes).forEach(([name, mesh]) => {
       const R = mesh.userData.radius as number;
       const period = mesh.userData.period as number;
@@ -490,7 +589,31 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
       // base ecliptic (x,0,z), then tilt
       mesh.position.set(Math.cos(theta) * R, 0, Math.sin(theta) * R);
       mesh.position.applyAxisAngle(Z_AXIS, ECLIPTIC_TILT);
+      
+      // Store Earth position for Moon
+      if (name === "Earth") {
+        earthPosition.copy(mesh.position);
+      }
     });
+    
+    // Position Moon orbiting Earth
+    if (earthMeshRef.current) {
+      // Moon's orbital phase (27.32 day period)
+      let normalizedMoonYear = (year % MOON_PERIOD_YEARS);
+      if (normalizedMoonYear < 0) normalizedMoonYear += MOON_PERIOD_YEARS;
+      const moonTheta = (normalizedMoonYear / MOON_PERIOD_YEARS) * Math.PI * 2;
+      
+      // Moon orbits in Earth's orbital plane (ecliptic)
+      const moonOffset = new THREE.Vector3(
+        Math.cos(moonTheta) * MOON_ORBIT_RADIUS,
+        0,
+        Math.sin(moonTheta) * MOON_ORBIT_RADIUS
+      );
+      moonOffset.applyAxisAngle(Z_AXIS, ECLIPTIC_TILT);
+      
+      // Position moon group at Earth + Moon offset
+      moonGroup.position.copy(earthPosition).add(moonOffset);
+    }
   }
 
   function update(year: number, dir: Direction, enableMotion: boolean) {
