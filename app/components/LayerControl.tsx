@@ -50,24 +50,47 @@ export default function LayerControl({ heroRef }: LayerControlProps) {
     constellations: false,
   });
 
+  // Sync initial state with scene visibility
+  useEffect(() => {
+    if (heroRef.current) {
+      const sceneVisibility = heroRef.current.getVisibility();
+      if (sceneVisibility) {
+        setLayers(sceneVisibility);
+      }
+    }
+  }, [heroRef]);
+
   const handleToggle = (key: keyof ComponentVisibility) => {
     const newValue = !layers[key];
     setLayers(prev => ({ ...prev, [key]: newValue }));
     heroRef.current?.toggleComponent(key, newValue);
   };
 
-  return (
-    <div className="fixed bottom-20 left-4 z-50">
+  const layerControlContent = (
+    <div className="pointer-events-auto" data-ui="layer-control">
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="bg-black/60 backdrop-blur-sm border border-white/20 rounded-lg px-4 py-2 text-white text-sm hover:bg-black/80 transition-colors shadow-lg"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsOpen(!isOpen);
+        }}
+        onMouseDown={(e) => {
+          e.stopPropagation();
+        }}
+        className="bg-black/60 backdrop-blur-sm border border-white/20 rounded-lg px-4 py-2 text-white text-sm hover:bg-black/80 transition-colors shadow-lg cursor-pointer"
         aria-label="Toggle layer controls"
+        type="button"
+        style={{ pointerEvents: 'auto', zIndex: 101 }}
       >
         {isOpen ? '✕ Close Layers' : '☰ Layers'}
       </button>
       
       {isOpen && (
-        <div className="mt-2 bg-black/80 backdrop-blur-sm border border-white/20 rounded-lg p-3 shadow-lg max-h-96 overflow-y-auto">
+        <div 
+          className="mt-2 bg-black/80 backdrop-blur-sm border border-white/20 rounded-lg p-3 shadow-lg max-h-96 overflow-y-auto pointer-events-auto" 
+          style={{ pointerEvents: 'auto', zIndex: 102 }}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
           <h3 className="text-white text-xs font-semibold mb-2 uppercase tracking-wide">
             Simulation Components
           </h3>
@@ -76,12 +99,19 @@ export default function LayerControl({ heroRef }: LayerControlProps) {
               <label
                 key={key}
                 className="flex items-center gap-2 cursor-pointer hover:bg-white/5 p-1.5 rounded transition-colors"
+                style={{ pointerEvents: 'auto' }}
+                onMouseDown={(e) => e.stopPropagation()}
               >
                 <input
                   type="checkbox"
                   checked={layers[key]}
-                  onChange={() => handleToggle(key)}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    handleToggle(key);
+                  }}
+                  onClick={(e) => e.stopPropagation()}
                   className="w-4 h-4 cursor-pointer"
+                  style={{ pointerEvents: 'auto' }}
                 />
                 <span className="text-white/90 text-sm select-none">
                   {LAYER_LABELS[key]}
@@ -97,6 +127,15 @@ export default function LayerControl({ heroRef }: LayerControlProps) {
           </div>
         </div>
       )}
+    </div>
+  );
+
+  return (
+    <div 
+      className="relative pointer-events-auto" 
+      data-ui="layer-control"
+    >
+      {layerControlContent}
     </div>
   );
 }

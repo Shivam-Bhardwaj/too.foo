@@ -11,7 +11,6 @@ import { CoordinateTransforms } from "./physics/CoordinateTransforms";
 import { JulianDate } from "./data/AstronomicalDataStore";
 import { PLANET_PROPERTIES } from "./data/PlanetaryEphemeris";
 import { VoyagerTrajectories } from "./physics/SpacecraftTrajectories";
-import { createPlasmaMaterial, updatePlasmaMaterial } from "./shaders/PlasmaShader";
 
 type Direction = 1 | -1;
 
@@ -79,7 +78,6 @@ export async function createResearchGradeScene(canvas: HTMLCanvasElement): Promi
   let currentDate = new Date();
   let timeMode: TimeMode = 'realtime';
   let timeSpeed = 1; // days per frame
-  let lastBoundaryUpdate = 0; // Track last time boundaries were updated
   
   // Component visibility
   const visibility: ComponentVisibility = {
@@ -171,56 +169,105 @@ export async function createResearchGradeScene(canvas: HTMLCanvasElement): Promi
   // Get heliosphere model
   const heliosphereModel = dataService.getHeliosphereModel();
   
-  // Termination shock - using volumetric glow effect instead of wireframe
+  // Termination shock - using smooth volumetric glow with multiple gradient layers
   const terminationShockGeometry = heliosphereModel.generateParametricSurface(
     'terminationShock',
     JulianDate.fromDate(currentDate),
-    48
+    64 // Higher resolution for smoother appearance
   );
   terminationShockGeometry.scale(AU_SCALE, AU_SCALE, AU_SCALE);
   
-  // Physically accurate plasma material for termination shock
-  const terminationShockVolumetricMaterial = createPlasmaMaterial({
-    baseColor: new THREE.Color(0xff8844),
-    opacity: 0.002,
-    plasmaTemperature: 10, // 10 eV at termination shock (shock heating)
-    plasmaDensity: 0.02, // Enhanced density due to compression
-    magneticFieldStrength: 0.5, // 0.5 nT - compressed field
-    shockCompression: 2.5, // Typical compression ratio at termination shock
+  // Create multiple gradient layers for smooth volumetric blending
+  // Layer 1: Core glow (innermost, strongest)
+  const tsCoreMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0xff8844,
+    emissive: 0xff6600,
+    emissiveIntensity: 1.2,
     transparent: true,
-    side: THREE.DoubleSide
+    opacity: 0.12,
+    side: THREE.DoubleSide,
+    roughness: 1.0,
+    metalness: 0.0,
+    transmission: 0.98,
+    thickness: 0.15,
+    ior: 1.05
   });
-  const terminationShockVolumetric = new THREE.Mesh(terminationShockGeometry, terminationShockVolumetricMaterial);
-  terminationShockVolumetric.setRotationFromMatrix(apexBasis);
-  terminationShockVolumetric.name = 'terminationShockVolumetric';
-  heliosphereGroup.add(terminationShockVolumetric);
+  const terminationShockCore = new THREE.Mesh(terminationShockGeometry, tsCoreMaterial);
+  terminationShockCore.setRotationFromMatrix(apexBasis);
+  terminationShockCore.name = 'terminationShockCore';
+  heliosphereGroup.add(terminationShockCore);
   
-  // Outer glow halo for depth - extremely subtle
-  const tsGlowGeometry = terminationShockGeometry.clone();
-  tsGlowGeometry.scale(1.05, 1.05, 1.05);
-  const tsGlowMaterial = new THREE.MeshBasicMaterial({
+  // Layer 2: Inner glow (smooth transition)
+  const tsInnerGeometry = terminationShockGeometry.clone();
+  tsInnerGeometry.scale(1.02, 1.02, 1.02);
+  const tsInnerMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0xff8844,
+    emissive: 0xff6600,
+    emissiveIntensity: 0.9,
+    transparent: true,
+    opacity: 0.10,
+    side: THREE.DoubleSide,
+    roughness: 1.0,
+    metalness: 0.0,
+    transmission: 0.97,
+    thickness: 0.18,
+    ior: 1.05
+  });
+  const terminationShockInner = new THREE.Mesh(tsInnerGeometry, tsInnerMaterial);
+  terminationShockInner.setRotationFromMatrix(apexBasis);
+  terminationShockInner.name = 'terminationShockInner';
+  heliosphereGroup.add(terminationShockInner);
+  
+  // Layer 3: Mid glow (smooth transition)
+  const tsMidGeometry = terminationShockGeometry.clone();
+  tsMidGeometry.scale(1.04, 1.04, 1.04);
+  const tsMidMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0xff8844,
+    emissive: 0xff6600,
+    emissiveIntensity: 0.6,
+    transparent: true,
+    opacity: 0.08,
+    side: THREE.DoubleSide,
+    roughness: 1.0,
+    metalness: 0.0,
+    transmission: 0.96,
+    thickness: 0.20,
+    ior: 1.05
+  });
+  const terminationShockMid = new THREE.Mesh(tsMidGeometry, tsMidMaterial);
+  terminationShockMid.setRotationFromMatrix(apexBasis);
+  terminationShockMid.name = 'terminationShockMid';
+  heliosphereGroup.add(terminationShockMid);
+  
+  // Layer 4: Outer glow (smooth fade-out)
+  const tsOuterGeometry = terminationShockGeometry.clone();
+  tsOuterGeometry.scale(1.06, 1.06, 1.06);
+  const tsOuterMaterial = new THREE.MeshBasicMaterial({
     color: 0xff6600,
     transparent: true,
-    opacity: 0.001, // 0.1% opacity - barely visible
-    side: THREE.DoubleSide
+    opacity: 0.06,
+    side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending // Smooth additive blending
   });
-  const terminationShockGlow = new THREE.Mesh(tsGlowGeometry, tsGlowMaterial);
-  terminationShockGlow.setRotationFromMatrix(apexBasis);
-  terminationShockGlow.name = 'terminationShockGlow';
-  heliosphereGroup.add(terminationShockGlow);
+  const terminationShockOuter = new THREE.Mesh(tsOuterGeometry, tsOuterMaterial);
+  terminationShockOuter.setRotationFromMatrix(apexBasis);
+  terminationShockOuter.name = 'terminationShockOuter';
+  heliosphereGroup.add(terminationShockOuter);
   
-  // Edge highlights using EdgesGeometry for subtle structure definition
-  const tsEdgesGeometry = new THREE.EdgesGeometry(terminationShockGeometry, 15);
-  const tsEdgesMaterial = new THREE.LineBasicMaterial({
-    color: 0xffaa44,
+  // Layer 5: Faint halo (very subtle outer edge)
+  const tsHaloGeometry = terminationShockGeometry.clone();
+  tsHaloGeometry.scale(1.08, 1.08, 1.08);
+  const tsHaloMaterial = new THREE.MeshBasicMaterial({
+    color: 0xff6600,
     transparent: true,
-    opacity: 0.01, // 1% opacity - very subtle edges
-    linewidth: 1
+    opacity: 0.03,
+    side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending
   });
-  const terminationShockEdges = new THREE.LineSegments(tsEdgesGeometry, tsEdgesMaterial);
-  terminationShockEdges.setRotationFromMatrix(apexBasis);
-  terminationShockEdges.name = 'terminationShockEdges';
-  heliosphereGroup.add(terminationShockEdges);
+  const terminationShockHalo = new THREE.Mesh(tsHaloGeometry, tsHaloMaterial);
+  terminationShockHalo.setRotationFromMatrix(apexBasis);
+  terminationShockHalo.name = 'terminationShockHalo';
+  heliosphereGroup.add(terminationShockHalo);
   
   // Heliopause
   const heliopauseGeometry = heliosphereModel.generateParametricSurface(
@@ -230,16 +277,16 @@ export async function createResearchGradeScene(canvas: HTMLCanvasElement): Promi
   );
   heliopauseGeometry.scale(AU_SCALE, AU_SCALE, AU_SCALE);
   
-  // Physically accurate plasma material for heliopause
-  const heliopauseMaterial = createPlasmaMaterial({
-    baseColor: new THREE.Color(0x4488ff),
-    opacity: 0.003,
-    plasmaTemperature: 5, // 5 eV at heliopause (cooler than termination shock)
-    plasmaDensity: 0.005, // Lower density at heliopause
-    magneticFieldStrength: 0.3, // 0.3 nT - weaker field
-    shockCompression: 1.5, // Less compression at heliopause
+  const heliopauseMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0x4488ff,
     transparent: true,
-    side: THREE.DoubleSide
+    opacity: 0.15,
+    roughness: 0.8,
+    metalness: 0.1,
+    side: THREE.DoubleSide,
+    transmission: 0.9,
+    thickness: 1,
+    ior: 1.1
   });
   
   const heliopauseMesh = new THREE.Mesh(heliopauseGeometry, heliopauseMaterial);
@@ -384,26 +431,18 @@ export async function createResearchGradeScene(canvas: HTMLCanvasElement): Promi
   const solarWindGroup = new THREE.Group();
   solarWindGroup.name = 'solarWind';
   
-  // Parker spiral magnetic field lines - physically accurate
-  const spiralCount = 8; // Fewer, more subtle lines
+  // Parker spiral field lines
+  const spiralCount = 12;
   for (let i = 0; i < spiralCount; i++) {
     const angle = (i / spiralCount) * Math.PI * 2;
     const spiralPoints: THREE.Vector3[] = [];
     
-    // Solar wind speed at 1 AU: ~400 km/s
-    // Solar rotation period: 27.3 days
-    // Parker spiral angle: tan(ψ) = Ωr/v
-    const omegaSun = 2 * Math.PI / (27.3 * 24 * 3600); // rad/s
-    const vSolarWind = 400e3; // m/s
-    
-    for (let r = 0.1; r < 150; r += 5) {
-      // Accurate Parker spiral angle
-      const rMeters = r * 1.496e11; // Convert AU to meters
-      const spiralAngle = angle - Math.atan2(omegaSun * rMeters, vSolarWind) * (r / 10);
-      
+    for (let r = 0.1; r < 150; r += 2) {
+      // Parker spiral angle
+      const spiralAngle = angle - (r / 10);
       const x = r * Math.cos(spiralAngle);
       const y = r * Math.sin(spiralAngle);
-      const z = 0; // Field lines in ecliptic plane (no artificial waviness)
+      const z = Math.sin(r * 0.05) * 5; // Slight waviness
       
       spiralPoints.push(new THREE.Vector3(x, z, y));
     }
@@ -412,7 +451,7 @@ export async function createResearchGradeScene(canvas: HTMLCanvasElement): Promi
     const spiralMaterial = new THREE.LineBasicMaterial({
       color: 0xffaa00,
       transparent: true,
-      opacity: 0.01 // Extremely subtle - 1% opacity
+      opacity: 0.3
     });
     const spiral = new THREE.Line(spiralGeometry, spiralMaterial);
     solarWindGroup.add(spiral);
@@ -424,43 +463,31 @@ export async function createResearchGradeScene(canvas: HTMLCanvasElement): Promi
   const ismWindGroup = new THREE.Group();
   ismWindGroup.name = 'interstellarWind';
   
-  // Particle system for ISM flow - physically accurate
-  const ismParticleCount = 500; // Fewer particles for better performance
+  // Particle system for ISM flow
+  const ismParticleCount = 2000;
   const ismGeometry = new THREE.BufferGeometry();
   const ismPositions = new Float32Array(ismParticleCount * 3);
   const ismVelocities = new Float32Array(ismParticleCount * 3);
   
-  // ISM flows from the direction of the solar apex at ~26 km/s
-  // Extract apex direction from basis matrix (first column)
-  const ismFlowDirection = new THREE.Vector3();
-  ismFlowDirection.setFromMatrixColumn(apexBasis, 0);
-  ismFlowDirection.normalize();
-  
   for (let i = 0; i < ismParticleCount; i++) {
-    // Start from upstream along apex direction
-    const spread = 50; // AU
-    const distance = 200 + Math.random() * 100; // 200-300 AU upstream
+    // Start from upstream
+    ismPositions[i * 3] = 300 + Math.random() * 100;
+    ismPositions[i * 3 + 1] = (Math.random() - 0.5) * 200;
+    ismPositions[i * 3 + 2] = (Math.random() - 0.5) * 200;
     
-    // Position along ISM flow direction with some spread
-    ismPositions[i * 3] = distance * ismFlowDirection.x + (Math.random() - 0.5) * spread;
-    ismPositions[i * 3 + 1] = distance * ismFlowDirection.y + (Math.random() - 0.5) * spread;
-    ismPositions[i * 3 + 2] = distance * ismFlowDirection.z + (Math.random() - 0.5) * spread;
-    
-    // Flow velocity toward heliosphere (26 km/s scaled for visualization)
-    const flowSpeed = 0.5; // AU per frame (scaled)
-    ismVelocities[i * 3] = -flowSpeed * ismFlowDirection.x;
-    ismVelocities[i * 3 + 1] = -flowSpeed * ismFlowDirection.y;
-    ismVelocities[i * 3 + 2] = -flowSpeed * ismFlowDirection.z;
+    // Flow velocity
+    ismVelocities[i * 3] = -2; // Flowing toward heliosphere
+    ismVelocities[i * 3 + 1] = 0;
+    ismVelocities[i * 3 + 2] = 0;
   }
   
   ismGeometry.setAttribute('position', new THREE.BufferAttribute(ismPositions, 3));
   
   const ismMaterial = new THREE.PointsMaterial({
     color: 0x6666ff,
-    size: 0.3, // Smaller particles
+    size: 0.5,
     transparent: true,
-    opacity: 0.05, // Very subtle - 5% opacity
-    blending: THREE.AdditiveBlending
+    opacity: 0.6
   });
   
   const ismParticles = new THREE.Points(ismGeometry, ismMaterial);
@@ -567,71 +594,61 @@ export async function createResearchGradeScene(canvas: HTMLCanvasElement): Promi
     const solarWind = dataService.getSolarWindConditions(date, 1);
     const pressure = solarWind.pressure / 2; // Normalize
     
-    // Calculate solar cycle phase (11-year cycle) based on simulation time
-    const yearsSinceEpoch = (date.getTime() - new Date(2000, 0, 1).getTime()) / (365.25 * 24 * 60 * 60 * 1000);
-    const solarCyclePhase = (yearsSinceEpoch % 11) / 11; // 0 to 1 over 11 years
-    
-    // Update boundaries based on solar cycle phase - update every frame for smooth animation
-    // When running at 11 years/sec, the full cycle completes in 1 second
-    const timeSinceLastUpdate = Date.now() - lastBoundaryUpdate;
-    if (timeSinceLastUpdate > 33) { // Update ~30 times per second for smooth pulsing
-      lastBoundaryUpdate = Date.now();
-      
-      // Scale the heliosphere based on solar cycle (breathing effect)
-      // Solar maximum = larger heliosphere, solar minimum = smaller
-      const scaleFactor = 0.95 + 0.1 * Math.sin(solarCyclePhase * Math.PI * 2); // Oscillates between 0.95 and 1.05
-      
-      // Update termination shock with solar cycle scaling
+    // Regenerate boundaries if needed (expensive, do sparingly)
+    if (Math.random() < 0.01) { // 1% chance per frame
+      // Update termination shock
       const newTSGeometry = heliosphereModel.generateParametricSurface(
         'terminationShock',
         jd,
         48
       );
-      newTSGeometry.scale(AU_SCALE * scaleFactor, AU_SCALE * scaleFactor, AU_SCALE * scaleFactor);
-      if (terminationShockVolumetric.geometry) {
-        terminationShockVolumetric.geometry.dispose();
+      newTSGeometry.scale(AU_SCALE, AU_SCALE, AU_SCALE);
+      
+      // Update all termination shock layers
+      const tsCore = heliosphereGroup.getObjectByName('terminationShockCore') as THREE.Mesh;
+      const tsInner = heliosphereGroup.getObjectByName('terminationShockInner') as THREE.Mesh;
+      const tsMid = heliosphereGroup.getObjectByName('terminationShockMid') as THREE.Mesh;
+      const tsOuter = heliosphereGroup.getObjectByName('terminationShockOuter') as THREE.Mesh;
+      const tsHalo = heliosphereGroup.getObjectByName('terminationShockHalo') as THREE.Mesh;
+      
+      if (tsCore) {
+        tsCore.geometry.dispose();
+        tsCore.geometry = newTSGeometry.clone();
       }
-      terminationShockVolumetric.geometry = newTSGeometry;
+      if (tsInner) {
+        tsInner.geometry.dispose();
+        const tsInnerGeo = newTSGeometry.clone();
+        tsInnerGeo.scale(1.008, 1.008, 1.008);
+        tsInner.geometry = tsInnerGeo;
+      }
+      if (tsMid) {
+        tsMid.geometry.dispose();
+        const tsMidGeo = newTSGeometry.clone();
+        tsMidGeo.scale(1.016, 1.016, 1.016);
+        tsMid.geometry = tsMidGeo;
+      }
+      if (tsOuter) {
+        tsOuter.geometry.dispose();
+        const tsOuterGeo = newTSGeometry.clone();
+        tsOuterGeo.scale(1.024, 1.024, 1.024);
+        tsOuter.geometry = tsOuterGeo;
+      }
+      if (tsHalo) {
+        tsHalo.geometry.dispose();
+        const tsHaloGeo = newTSGeometry.clone();
+        tsHaloGeo.scale(1.032, 1.032, 1.032);
+        tsHalo.geometry = tsHaloGeo;
+      }
       
-      // Update glow geometry
-      const newGlowGeometry = newTSGeometry.clone();
-      newGlowGeometry.scale(1.05, 1.05, 1.05);
-      terminationShockGlow.geometry.dispose();
-      terminationShockGlow.geometry = newGlowGeometry;
-      
-      // Update edges
-      const newEdgesGeometry = new THREE.EdgesGeometry(newTSGeometry, 15);
-      terminationShockEdges.geometry.dispose();
-      terminationShockEdges.geometry = newEdgesGeometry;
-      
-      // Update heliopause with solar cycle scaling
+      // Update heliopause
       const newHPGeometry = heliosphereModel.generateParametricSurface(
         'heliopause',
         jd,
         48
       );
-      newHPGeometry.scale(AU_SCALE * scaleFactor, AU_SCALE * scaleFactor, AU_SCALE * scaleFactor);
+      newHPGeometry.scale(AU_SCALE, AU_SCALE, AU_SCALE);
       heliopauseMesh.geometry.dispose();
       heliopauseMesh.geometry = newHPGeometry;
-      
-      // Update material properties based on solar activity
-      const activityLevel = 0.5 + 0.5 * Math.sin(solarCyclePhase * Math.PI * 2);
-      
-      // Update plasma shader uniforms
-      updatePlasmaMaterial(terminationShockVolumetricMaterial as THREE.ShaderMaterial, Date.now() / 1000, solarCyclePhase);
-      updatePlasmaMaterial(heliopauseMaterial as THREE.ShaderMaterial, Date.now() / 1000, solarCyclePhase);
-      
-      // Update plasma parameters based on solar cycle
-      terminationShockVolumetricMaterial.uniforms.plasmaDensity.value = 0.01 + 0.02 * activityLevel; // Varies with solar wind density
-      terminationShockVolumetricMaterial.uniforms.plasmaTemperature.value = 8 + 4 * activityLevel; // Temperature varies 8-12 eV
-      terminationShockVolumetricMaterial.uniforms.magneticFieldStrength.value = 0.3 + 0.4 * activityLevel; // Field varies 0.3-0.7 nT
-      
-      heliopauseMaterial.uniforms.plasmaDensity.value = 0.003 + 0.004 * activityLevel;
-      heliopauseMaterial.uniforms.plasmaTemperature.value = 4 + 2 * activityLevel; // 4-6 eV
-      heliopauseMaterial.uniforms.magneticFieldStrength.value = 0.2 + 0.2 * activityLevel; // 0.2-0.4 nT
-      
-      // Update simple glow materials
-      tsGlowMaterial.opacity = 0.0005 + 0.001 * activityLevel; // Varies 0.0005-0.0015
     }
     
     // Update ISM particles
@@ -646,18 +663,11 @@ export async function createResearchGradeScene(canvas: HTMLCanvasElement): Promi
       ismPos[idx + 1] += ismVel[idx + 1];
       ismPos[idx + 2] += ismVel[idx + 2];
       
-      // Check distance from origin
-      const distance = Math.sqrt(ismPos[idx] * ismPos[idx] + 
-                                ismPos[idx + 1] * ismPos[idx + 1] + 
-                                ismPos[idx + 2] * ismPos[idx + 2]);
-      
-      // Reset if particle has passed through heliosphere
-      if (distance < 50) { // Reset when close to Sun
-        const spread = 50;
-        const resetDistance = 200 + Math.random() * 100;
-        ismPos[idx] = resetDistance * ismFlowDirection.x + (Math.random() - 0.5) * spread;
-        ismPos[idx + 1] = resetDistance * ismFlowDirection.y + (Math.random() - 0.5) * spread;
-        ismPos[idx + 2] = resetDistance * ismFlowDirection.z + (Math.random() - 0.5) * spread;
+      // Reset if too far
+      if (ismPos[idx] < -300) {
+        ismPos[idx] = 300 + Math.random() * 100;
+        ismPos[idx + 1] = (Math.random() - 0.5) * 200;
+        ismPos[idx + 2] = (Math.random() - 0.5) * 200;
       }
     }
     
@@ -666,17 +676,13 @@ export async function createResearchGradeScene(canvas: HTMLCanvasElement): Promi
   
   // Main update function
   function update(date: Date, speed: number, motionEnabled: boolean) {
-    // Update time - speed is in days per frame
-    if (motionEnabled && speed > 0) {
-      const msPerDay = 24 * 60 * 60 * 1000;
-      currentDate = new Date(currentDate.getTime() + speed * msPerDay);
+    // Update time
+    if (motionEnabled) {
+      currentDate = new Date(currentDate.getTime() + speed * 24 * 60 * 60 * 1000);
       
       if (timeMode === 'realtime') {
         currentDate = new Date(); // Snap to real time
       }
-    } else if (!motionEnabled) {
-      // Use the provided date when not animating
-      currentDate = date;
     }
     
     // Update scene

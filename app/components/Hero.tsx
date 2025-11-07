@@ -106,7 +106,8 @@ const Hero = forwardRef<HeroRef>((props, ref) => {
   return (
     <canvas
       ref={canvasRef}
-      className="absolute inset-0 w-full h-full"
+      className="absolute inset-0 w-full h-full pointer-events-auto"
+      style={{ pointerEvents: 'auto' }}
       aria-hidden="true"
     />
   );

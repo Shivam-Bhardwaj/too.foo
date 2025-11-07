@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { getPrefersReducedMotion, createMotionObserver } from '../lib/motion';
 import { HeroRef } from './Hero';
-import DateDisplay from './DateDisplay';
 import { linearToLogYear, yearToLinear, formatLogTime, yearsToSeconds } from '../lib/timeScale';
 
 type Direction = 1 | -1;
@@ -56,8 +55,7 @@ export default function Controls({
 
   useEffect(() => {
     setAnnouncement(`Year: ${Math.floor(year)}. Speed: ${speed} years/sec.`);
-    onTimeChange(year);
-  }, [onTimeChange]);
+  }, [year, speed]);
 
   useEffect(() => {
     const systemReduced = getPrefersReducedMotion();
@@ -189,25 +187,17 @@ export default function Controls({
 
   const motionDisabled = reduceMotion || paused;
 
-  useEffect(() => {
-    if (!heroRef.current) return;
-    heroRef.current.updateScene(currentYearRef.current, direction, !reduceMotion && !paused);
-  }, [direction, reduceMotion, paused, heroRef]);
-
   return (
     <>
-      {/* Date Display */}
-      <DateDisplay year={year} speed={speed} />
-
-      {/* Controls */}
+      {/* Controls - Header section (one line) */}
       <div 
-        className="fixed top-4 right-4 z-40 flex flex-col gap-2 rounded-2xl bg-black/40 backdrop-blur border border-white/10 p-3 shadow-lg"
+        className="flex items-center gap-3 rounded-2xl bg-black/40 backdrop-blur border border-white/10 px-4 py-2 shadow-lg"
         role="region"
         aria-label="Simulation controls">
         
         {/* Logarithmic Time Slider */}
-        <div className="flex flex-col gap-1">
-          <label htmlFor="year-slider" className="text-xs text-white/70">
+        <div className="flex items-center gap-2">
+          <label htmlFor="year-slider" className="text-xs text-white/70 whitespace-nowrap">
             Time: {formatLogTime(yearsToSeconds(year))}
           </label>
           <input
@@ -223,15 +213,18 @@ export default function Controls({
             disabled={motionDisabled}
             aria-label="Time (logarithmic scale)"
             title="Scrub through time (logarithmic scale)"
-            className="w-48 h-1.5 bg-white/20 rounded-lg appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-white/50"
+            className="w-32 h-1.5 bg-white/20 rounded-lg appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-white/50"
             style={{
               background: `linear-gradient(to right, #ffffff 0%, #ffffff ${logSliderValue * 100}%, rgba(255, 255, 255, 0.2) ${logSliderValue * 100}%, rgba(255, 255, 255, 0.2) 100%)`,
             }}
           />
         </div>
 
+        {/* Divider */}
+        <div className="h-6 w-px bg-white/20"></div>
+
         {/* Speed Controls */}
-        <div className="flex flex-wrap gap-1">
+        <div className="flex items-center gap-1">
           {SPEED_PRESETS.map((preset, index) => (
             <button
               key={index}
@@ -250,8 +243,11 @@ export default function Controls({
           ))}
         </div>
 
+        {/* Divider */}
+        <div className="h-6 w-px bg-white/20"></div>
+
         {/* Direction and Control Buttons */}
-        <div className="flex flex-wrap gap-1">
+        <div className="flex items-center gap-1">
           <button
             onClick={handleDirectionToggle}
             disabled={motionDisabled}
