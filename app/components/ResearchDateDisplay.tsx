@@ -6,13 +6,30 @@ export default function ResearchDateDisplay() {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
 
   useEffect(() => {
-    const handleDateUpdate = (e: CustomEvent<Date>) => {
-      setCurrentDate(e.detail);
+    const handleDateUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent<Date>;
+      if (customEvent.detail) {
+        setCurrentDate(customEvent.detail);
+      }
     };
 
-    window.addEventListener('research-date-update', handleDateUpdate as EventListener);
+    // Listen for date updates
+    window.addEventListener('research-date-update', handleDateUpdate);
+    
+    // Also listen for scene ready event to get initial date
+    const handleSceneReady = () => {
+      // Request initial date from hero component if available
+      setTimeout(() => {
+        const event = new CustomEvent('research-date-request');
+        window.dispatchEvent(event);
+      }, 100);
+    };
+    
+    window.addEventListener('research-scene-ready', handleSceneReady);
+    
     return () => {
-      window.removeEventListener('research-date-update', handleDateUpdate as EventListener);
+      window.removeEventListener('research-date-update', handleDateUpdate);
+      window.removeEventListener('research-scene-ready', handleSceneReady);
     };
   }, []);
 
@@ -24,7 +41,7 @@ export default function ResearchDateDisplay() {
   };
 
   return (
-    <div className="text-2xl md:text-3xl font-mono font-light text-white">
+    <div className="text-2xl md:text-3xl font-mono font-light text-white min-h-[2rem]">
       {formatDate(currentDate)}
     </div>
   );

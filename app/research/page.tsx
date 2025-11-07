@@ -32,7 +32,7 @@ export default function ResearchPage() {
       </header>
 
       {/* 2. Text Section (Date) */}
-      <div className="flex-shrink-0 py-3 px-4 text-center border-b border-white/10" data-section="text">
+      <div className="flex-shrink-0 py-3 px-4 text-center border-b border-white/10 bg-black" data-section="text">
         <ResearchDateDisplay />
       </div>
 

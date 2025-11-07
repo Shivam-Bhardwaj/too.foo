@@ -174,6 +174,11 @@ export default function ResearchGradeClientWrapper() {
     window.dispatchEvent(new CustomEvent('research-date-update', { detail: date }));
   }, []);
 
+  // Fire initial date event when component mounts
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('research-date-update', { detail: currentDate }));
+  }, []);
+
   return (
     <>
       {/* Simulation canvas */}
