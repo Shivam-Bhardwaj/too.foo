@@ -772,8 +772,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     motionEnabled = enableMotion;
 
     // Smooth interpolation to target year (keeps scrub smooth)
-    const alpha = 0.15;
-    currentYear = currentYear + (year - currentYear) * alpha;
+    // When motion is enabled (auto-advancing), use year directly for responsive updates
+    // When scrubbing/seeking, use interpolation for smooth transitions
+    if (enableMotion) {
+      currentYear = year; // Direct update for real-time animation
+    } else {
+      const alpha = 0.15;
+      currentYear = currentYear + (year - currentYear) * alpha;
+    }
 
     // Planet placement (planets orbit within heliosphere)
     placePlanets(currentYear);
