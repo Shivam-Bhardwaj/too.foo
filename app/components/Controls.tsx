@@ -30,9 +30,12 @@ export default function Controls({
   const lastTimeRef = useRef(0.5);
   const targetTimeRef = useRef(0.5);
   const animationFrameRef = useRef<number | null>(null);
+  
+  // Speed up time - ~1 full Earth orbit every 20s
+  const AUTOPLAY_SPEED = 1 / 20; // normalized cycles per second
 
   useEffect(() => {
-    setAnnouncement('Direction: Apex. Time set to 0.5.');
+    setAnnouncement('Direction: Apex. Time set to 0.5. Fast mode enabled.');
     onTimeChange(0.5);
   }, [onTimeChange]);
 
@@ -79,8 +82,8 @@ export default function Controls({
         setTime(finalTime);
         onTimeChange(finalTime);
       } else {
-        // Auto-drift (forward or reverse based on direction)
-        finalTime = ((current + (dt / 75) * direction + 1) % 1);
+        // Fast auto-drift with AUTOPLAY_SPEED
+        finalTime = ((current + (dt * AUTOPLAY_SPEED) * direction + 1) % 1);
         if (finalTime < 0) finalTime += 1;
         lastTimeRef.current = finalTime;
         targetTimeRef.current = finalTime;
@@ -154,66 +157,67 @@ export default function Controls({
   }, [direction, reduceMotion, paused, heroRef]);
 
   return (
-    <div className="fixed bottom-4 right-4 z-10 flex flex-col gap-3 bg-cosmic-indigo/90 backdrop-blur-sm border border-cosmic-cyan/20 rounded-lg p-4 shadow-lg">
-      <div className="flex flex-col gap-2 min-w-[200px]">
-        {/* Time Slider */}
-        <div className="flex flex-col gap-1">
-          <label htmlFor="time-slider" className="text-xs text-cosmic-cyan/80">
-            Time
-          </label>
-          <input
-            id="time-slider"
-            ref={sliderRef}
-            type="range"
-            min="0"
-            max="1"
-            step="0.001"
-            value={time}
-            onChange={handleTimeChange}
-            onKeyDown={handleSliderKeyDown}
-            disabled={motionDisabled}
-            aria-label="Time"
-            title="Scrub the solar drift."
-            className="w-full h-2 bg-cosmic-cyan/20 rounded-lg appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-cosmic-cyan/50"
-            style={{
-              background: `linear-gradient(to right, #99E6FF 0%, #99E6FF ${time * 100}%, rgba(153, 230, 255, 0.2) ${time * 100}%, rgba(153, 230, 255, 0.2) 100%)`,
-            }}
-          />
-        </div>
-
-        {/* Direction Toggle */}
-        <button
-          onClick={handleDirectionToggle}
+    <div 
+      className="fixed top-4 right-4 z-40 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 rounded-2xl bg-black/40 backdrop-blur border border-white/10 p-2 shadow-lg"
+      role="region"
+      aria-label="Simulation controls">
+      {/* Time Slider */}
+      <div className="flex items-center gap-2">
+        <label htmlFor="time-slider" className="text-xs text-white/70 sr-only sm:not-sr-only">
+          Time
+        </label>
+        <input
+          id="time-slider"
+          ref={sliderRef}
+          type="range"
+          min="0"
+          max="1"
+          step="0.001"
+          value={time}
+          onChange={handleTimeChange}
+          onKeyDown={handleSliderKeyDown}
           disabled={motionDisabled}
-          aria-label="Switch travel direction"
-          title="Switch travel direction"
-          className="px-3 py-1.5 text-sm text-cosmic-cyan bg-cosmic-cyan/10 border border-cosmic-cyan/30 rounded hover:bg-cosmic-cyan/20 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-cosmic-cyan/50 transition-colors"
-        >
-          {direction === 1 ? 'Apex →' : 'Reverse ←'}
-        </button>
-
-        {/* Reduce Motion Toggle */}
-        <button
-          onClick={handleReduceMotionToggle}
-          disabled={getPrefersReducedMotion()}
-          aria-label="Disable background motion"
-          title={reduceMotion ? 'Motion off' : 'Disable background motion'}
-          className="px-3 py-1.5 text-sm text-cosmic-cyan bg-cosmic-cyan/10 border border-cosmic-cyan/30 rounded hover:bg-cosmic-cyan/20 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-cosmic-cyan/50 transition-colors"
-        >
-          Reduce motion
-        </button>
-
-        {/* Pause Button */}
-        <button
-          onClick={handlePauseToggle}
-          disabled={reduceMotion}
-          aria-label="Pause background"
-          title="Pause background"
-          className="px-3 py-1.5 text-sm text-cosmic-cyan bg-cosmic-cyan/10 border border-cosmic-cyan/30 rounded hover:bg-cosmic-cyan/20 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-cosmic-cyan/50 transition-colors"
-        >
-          Pause background
-        </button>
+          aria-label="Time"
+          title="Scrub the solar drift."
+          className="w-24 sm:w-32 h-1.5 bg-white/20 rounded-lg appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-white/50"
+          style={{
+            background: `linear-gradient(to right, #ffffff 0%, #ffffff ${time * 100}%, rgba(255, 255, 255, 0.2) ${time * 100}%, rgba(255, 255, 255, 0.2) 100%)`,
+          }}
+        />
       </div>
+
+      {/* Direction Toggle */}
+      <button
+        onClick={handleDirectionToggle}
+        disabled={motionDisabled}
+        aria-label="Switch travel direction"
+        title="Switch travel direction"
+        className="px-2 sm:px-3 py-1 text-xs sm:text-sm text-white bg-white/10 border border-white/20 rounded-lg hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-white/50 transition-colors"
+      >
+        {direction === 1 ? 'Apex →' : 'Reverse ←'}
+      </button>
+
+      {/* Pause Button */}
+      <button
+        onClick={handlePauseToggle}
+        disabled={reduceMotion}
+        aria-label={paused ? 'Resume background' : 'Pause background'}
+        title={paused ? 'Resume background' : 'Pause background'}
+        className="px-2 sm:px-3 py-1 text-xs sm:text-sm text-white bg-white/10 border border-white/20 rounded-lg hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-white/50 transition-colors"
+      >
+        {paused ? 'Resume' : 'Pause'}
+      </button>
+
+      {/* Reduce Motion Toggle */}
+      <button
+        onClick={handleReduceMotionToggle}
+        disabled={getPrefersReducedMotion()}
+        aria-label="Disable background motion"
+        title={reduceMotion ? 'Motion off' : 'Disable background motion'}
+        className="px-2 sm:px-3 py-1 text-xs sm:text-sm text-white bg-white/10 border border-white/20 rounded-lg hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-white/50 transition-colors"
+      >
+        {reduceMotion ? 'Motion off' : 'Reduce motion'}
+      </button>
 
       {/* Aria-live announcements */}
       <div
@@ -223,13 +227,6 @@ export default function Controls({
       >
         {announcement}
       </div>
-
-      {/* Visual reduced motion note */}
-      {reduceMotion && (
-        <p className="text-xs text-cosmic-cyan/60 mt-1">
-          Motion off (respects your system setting).
-        </p>
-      )}
     </div>
   );
 }

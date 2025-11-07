@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "es2015",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -16,7 +20,9 @@
     "incremental": true,
     "downlevelIteration": true,
     "paths": {
-      "@/*": ["./*"]
+      "@/*": [
+        "./*"
+      ]
     },
     "plugins": [
       {
@@ -24,6 +30,17 @@
       }
     ]
   },
-  "include": ["next-env.d.ts", "app/**/*.ts", "app/**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "portfolio", "backend", "projects"]
+  "include": [
+    "next-env.d.ts",
+    "app/**/*.ts",
+    "app/**/*.tsx",
+    ".next/types/**/*.ts",
+    "out/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "portfolio",
+    "backend",
+    "projects"
+  ]
 }

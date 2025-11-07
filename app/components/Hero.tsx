@@ -45,6 +45,9 @@ const Hero = forwardRef<HeroRef>((props, ref) => {
 
       handleResize();
       window.addEventListener('resize', handleResize);
+      
+      // Initial render with Earth at phase 0.5 and no drift
+      scene.update(0.5, 1, false);
 
       return () => {
         window.removeEventListener('resize', handleResize);
