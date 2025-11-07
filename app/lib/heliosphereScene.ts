@@ -14,6 +14,9 @@ import { HeliosphereModel } from "./physics/HeliosphereModel";
 import { VoyagerTrajectories } from "./physics/SpacecraftTrajectories";
 import { JulianDate } from "./data/AstronomicalDataStore";
 import { PlanetaryEphemeris, PLANET_PROPERTIES } from "./data/PlanetaryEphemeris";
+import { LabelManager } from "./LabelSystem";
+import { getAllInterstellarObjects, generateOumuamuaTrajectory, generateBorisovTrajectory } from "./data/InterstellarObjects";
+import { COMPLETE_CONSTELLATIONS, CONSTELLATION_STARS, generateConstellationLines } from "./data/Constellations";
 
 type Direction = 1 | -1;
 
@@ -32,6 +35,9 @@ export type ComponentVisibility = {
   voyagers: boolean;
   distanceMarkers: boolean;
   solarApex: boolean;
+  labels: boolean;
+  interstellarObjects: boolean;
+  constellations: boolean;
 };
 
 export type SceneAPI = {
@@ -590,6 +596,90 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   const v2Trajectory = new THREE.Line(v2TrajGeometry, v2TrajMaterial);
   v2Trajectory.name = 'Voyager 2 Trajectory';
   voyagerGroup.add(v2Trajectory);
+  
+  // ===== Label System =====
+  const labelManager = new LabelManager(canvas, camera);
+  
+  // ===== Interstellar Objects =====
+  const interstellarObjectsGroup = new THREE.Group();
+  interstellarObjectsGroup.name = 'interstellarObjects';
+  scene.add(interstellarObjectsGroup);
+  
+  // 'Oumuamua
+  const oumuamuaGeometry = new THREE.BoxGeometry(0.2, 0.2, 2.0); // Elongated shape
+  const oumuamuaMaterial = new THREE.MeshBasicMaterial({ color: 0xff6600 });
+  const oumuamua = new THREE.Mesh(oumuamuaGeometry, oumuamuaMaterial);
+  oumuamua.name = "Oumuamua";
+  interstellarObjectsGroup.add(oumuamua);
+  
+  // Oumuamua trajectory
+  const oumuamuaTraj = generateOumuamuaTrajectory();
+  const oumuamuaTrajPoints: THREE.Vector3[] = [];
+  for (let i = 0; i < oumuamuaTraj.epochs.length; i++) {
+    const pos = oumuamuaTraj.values[i];
+    oumuamuaTrajPoints.push(pos.multiplyScalar(0.03));
+  }
+  const oumuamuaTrajGeometry = new THREE.BufferGeometry().setFromPoints(oumuamuaTrajPoints);
+  const oumuamuaTrajLine = new THREE.Line(
+    oumuamuaTrajGeometry,
+    new THREE.LineBasicMaterial({ color: 0xff6600, transparent: true, opacity: 0.3 })
+  );
+  interstellarObjectsGroup.add(oumuamuaTrajLine);
+  
+  // 2I/Borisov
+  const borisovGeometry = new THREE.SphereGeometry(0.15, 16, 16);
+  const borisovMaterial = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+  const borisov = new THREE.Mesh(borisovGeometry, borisovMaterial);
+  borisov.name = "2I/Borisov";
+  interstellarObjectsGroup.add(borisov);
+  
+  // Borisov trajectory
+  const borisovTraj = generateBorisovTrajectory();
+  const borisovTrajPoints: THREE.Vector3[] = [];
+  for (let i = 0; i < borisovTraj.epochs.length; i++) {
+    const pos = borisovTraj.values[i];
+    borisovTrajPoints.push(pos.multiplyScalar(0.03));
+  }
+  const borisovTrajGeometry = new THREE.BufferGeometry().setFromPoints(borisovTrajPoints);
+  const borisovTrajLine = new THREE.Line(
+    borisovTrajGeometry,
+    new THREE.LineBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.3 })
+  );
+  interstellarObjectsGroup.add(borisovTrajLine);
+  
+  // Andromeda Galaxy (very distant, shown as large fuzzy patch)
+  const andromedaGeometry = new THREE.SphereGeometry(2.0, 32, 32);
+  const andromedaMaterial = new THREE.MeshBasicMaterial({
+    color: 0x8888ff,
+    transparent: true,
+    opacity: 0.2
+  });
+  const andromeda = new THREE.Mesh(andromedaGeometry, andromedaMaterial);
+  andromeda.name = "Andromeda Galaxy";
+  interstellarObjectsGroup.add(andromeda);
+  
+  // ===== Constellations =====
+  const constellationsGroup = new THREE.Group();
+  constellationsGroup.name = 'constellations';
+  scene.add(constellationsGroup);
+  
+  // Add constellation stars to star catalog
+  const allStars = [...FAMOUS_STARS, ...CONSTELLATION_STARS];
+  
+  // Create constellation lines
+  COMPLETE_CONSTELLATIONS.forEach(constellation => {
+    const lineGeometry = generateConstellationLines(constellation, allStars);
+    if (lineGeometry.attributes.position.count > 0) {
+      const lineMaterial = new THREE.LineBasicMaterial({
+        color: 0x4444ff,
+        transparent: true,
+        opacity: 0.3
+      });
+      const constellationLine = new THREE.LineSegments(lineGeometry, lineMaterial);
+      constellationLine.name = constellation.name;
+      constellationsGroup.add(constellationLine);
+    }
+  });
 
   // Brighter lighting for better visibility
   scene.add(new THREE.AmbientLight(0xffffff, 0.3));  // Increased ambient
@@ -830,6 +920,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     voyagers: true,
     distanceMarkers: true,
     solarApex: true,
+    labels: true,
+    interstellarObjects: true,
+    constellations: false,
   };
   
   // ==== Animation state ====
@@ -946,6 +1039,78 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     } catch (error) {
       console.warn('Could not update Voyager positions:', error);
     }
+    
+    // Update interstellar object positions
+    const interstellarObjects = getAllInterstellarObjects();
+    // Positions are already in AU, scale to scene units
+    oumuamua.position.copy(interstellarObjects[0].currentPosition.clone().multiplyScalar(0.03));
+    borisov.position.copy(interstellarObjects[1].currentPosition.clone().multiplyScalar(0.03));
+    andromeda.position.copy(interstellarObjects[2].currentPosition.clone().multiplyScalar(0.03));
+    
+    // Update labels
+    if (visibility.labels) {
+      // Planet labels
+      Object.entries(planetMeshes).forEach(([name, mesh]) => {
+        const worldPos = new THREE.Vector3();
+        mesh.getWorldPosition(worldPos);
+        labelManager.createLabel(`planet-${name}`, {
+          text: name,
+          position: worldPos,
+          offset: new THREE.Vector3(0, 0.3, 0),
+          showDistance: true,
+          fontSize: 11
+        });
+      });
+      
+      // Voyager labels
+      const v1WorldPos = new THREE.Vector3();
+      voyager1.getWorldPosition(v1WorldPos);
+      labelManager.createLabel('voyager1', {
+        text: 'Voyager 1',
+        position: v1WorldPos,
+        offset: new THREE.Vector3(0, 0.3, 0),
+        color: '#00ff00',
+        fontSize: 10
+      });
+      
+      const v2WorldPos = new THREE.Vector3();
+      voyager2.getWorldPosition(v2WorldPos);
+      labelManager.createLabel('voyager2', {
+        text: 'Voyager 2',
+        position: v2WorldPos,
+        offset: new THREE.Vector3(0, 0.3, 0),
+        color: '#00ffff',
+        fontSize: 10
+      });
+      
+      // Boundary labels
+      labelManager.createLabel('termination-shock', {
+        text: 'Termination Shock',
+        position: new THREE.Vector3(90 * 0.03, 0, 0),
+        color: '#ffaa44',
+        fontSize: 10
+      });
+      
+      labelManager.createLabel('heliopause', {
+        text: 'Heliopause',
+        position: new THREE.Vector3(120 * 0.03, 0, 0),
+        color: '#1a2a4e',
+        fontSize: 10
+      });
+    } else {
+      // Remove all labels
+      Object.keys(planetMeshes).forEach(name => {
+        labelManager.removeLabel(`planet-${name}`);
+      });
+      labelManager.removeLabel('voyager1');
+      labelManager.removeLabel('voyager2');
+      labelManager.removeLabel('termination-shock');
+      labelManager.removeLabel('heliopause');
+    }
+    
+    // Update label manager
+    labelManager.update(camera);
+    labelManager.updateVisibility(camera, 0.5, 50);
 
     // Animate solar wind streams with accurate physics
     if (motionEnabled) {
@@ -1167,6 +1332,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
+    labelManager.resize(w, h);
   }
 
   function dispose() {
@@ -1174,6 +1340,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     renderer.dispose();
     starGeo.dispose();
     starMat.dispose();
+    labelManager.dispose();
   }
   
   // Toggle component visibility (astronomer controls)
@@ -1222,6 +1389,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
         break;
       case 'solarApex':
         solarApexGroup.visible = visible;
+        break;
+      case 'labels':
+        labelManager.setVisible(visible);
+        break;
+      case 'interstellarObjects':
+        interstellarObjectsGroup.visible = visible;
+        break;
+      case 'constellations':
+        constellationsGroup.visible = visible;
         break;
     }
   }

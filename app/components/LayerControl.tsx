@@ -23,6 +23,9 @@ const LAYER_LABELS: Record<keyof ComponentVisibility, string> = {
   voyagers: 'Voyager Spacecraft',
   distanceMarkers: 'Distance Markers (AU)',
   solarApex: 'Solar Apex Direction',
+  labels: 'Object Labels',
+  interstellarObjects: 'Interstellar Objects',
+  constellations: 'Constellations',
 };
 
 export default function LayerControl({ heroRef }: LayerControlProps) {
@@ -42,6 +45,9 @@ export default function LayerControl({ heroRef }: LayerControlProps) {
     voyagers: true,
     distanceMarkers: true,
     solarApex: true,
+    labels: true,
+    interstellarObjects: true,
+    constellations: false,
   });
 
   const handleToggle = (key: keyof ComponentVisibility) => {

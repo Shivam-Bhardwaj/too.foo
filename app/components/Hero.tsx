@@ -45,6 +45,9 @@ const Hero = forwardRef<HeroRef>((props, ref) => {
         voyagers: true,
         distanceMarkers: true,
         solarApex: true,
+        labels: true,
+        interstellarObjects: true,
+        constellations: false,
       };
     },
   }));
