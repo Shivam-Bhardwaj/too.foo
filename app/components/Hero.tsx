@@ -43,10 +43,10 @@ const Hero = forwardRef<HeroRef>((props, ref) => {
         stars: true,
         famousStars: true,
         voyagers: true,
-        distanceMarkers: true,
-        solarApex: true,
+        distanceMarkers: false, // Hidden by default - removed as meaningless artifact
+        solarApex: false, // Hidden by default - removed as meaningless artifact
         labels: true,
-        interstellarObjects: true,
+        interstellarObjects: false, // Hidden by default - removed as meaningless artifacts
         constellations: false,
       };
     },
