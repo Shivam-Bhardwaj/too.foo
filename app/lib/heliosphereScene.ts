@@ -5,7 +5,7 @@ type Direction = 1 | -1;
 
 export type SceneAPI = {
   canvas: HTMLCanvasElement;
-  update: (normTime: number, direction: Direction, motionEnabled: boolean) => void;
+  update: (year: number, direction: Direction, motionEnabled: boolean) => void;
   resize: (w: number, h: number) => void;
   dispose: () => void;
 };
@@ -325,9 +325,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   });
 
   // ==== Animation state ====
-  let logicalTime = 0.5;     // Earth phase default = 0.5 (π radians)
-  let driftX = 0;            // solar-system sideways drift inside fixed heliosphere
-  let starDriftX = 0;        // starfield drift accumulator for parallax
+  let currentYear = 2024.0;   // Start at current year (can be adjusted)
+  let driftX = 0;              // solar-system sideways drift inside fixed heliosphere
+  let starDriftX = 0;         // starfield drift accumulator for parallax
   let direction: Direction = 1;
   let motionEnabled = true;
   
@@ -342,28 +342,32 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   // Helpers
   const Z_AXIS = new THREE.Vector3(0, 0, 1);
 
-  function placePlanets(tNorm: number) {
-    // tNorm is "Earth years" normalized to [0..1]; Earth theta = 2π tNorm
+  function placePlanets(year: number) {
+    // Calculate planet positions based on actual year
+    // Each planet's angle = (year / period) * 2π
     Object.entries(planetMeshes).forEach(([name, mesh]) => {
       const R = mesh.userData.radius as number;
       const period = mesh.userData.period as number;
-      const theta = (tNorm / period) * Math.PI * 2; // ω = 2π / period
+      // Handle negative years and wrap properly
+      let normalizedYear = year % period;
+      if (normalizedYear < 0) normalizedYear += period;
+      const theta = (normalizedYear / period) * Math.PI * 2;
       // base ecliptic (x,0,z), then tilt
       mesh.position.set(Math.cos(theta) * R, 0, Math.sin(theta) * R);
       mesh.position.applyAxisAngle(Z_AXIS, ECLIPTIC_TILT);
     });
   }
 
-  function update(normTime: number, dir: Direction, enableMotion: boolean) {
+  function update(year: number, dir: Direction, enableMotion: boolean) {
     direction = dir;
     motionEnabled = enableMotion;
 
-    // ease logical time toward target (keeps scrub smooth)
+    // Smooth interpolation to target year (keeps scrub smooth)
     const alpha = 0.15;
-    logicalTime = logicalTime + (normTime - logicalTime) * alpha;
+    currentYear = currentYear + (year - currentYear) * alpha;
 
     // Planet placement (planets orbit within heliosphere)
-    placePlanets(logicalTime);
+    placePlanets(currentYear);
 
     // HELIOSPHERE IS FIXED - we're viewing it from a distance as it moves through the galaxy
     // Stars stream past to show our motion through the Milky Way (230 km/s orbital speed)

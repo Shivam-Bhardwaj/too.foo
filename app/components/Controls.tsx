@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { getPrefersReducedMotion, createMotionObserver, smoothSeek } from '../lib/motion';
+import { getPrefersReducedMotion, createMotionObserver } from '../lib/motion';
 import { HeroRef } from './Hero';
+import DateDisplay from './DateDisplay';
 
 type Direction = 1 | -1;
 
@@ -14,6 +15,19 @@ interface ControlsProps {
   onPauseChange: (paused: boolean) => void;
 }
 
+// Speed presets: years per second
+const SPEED_PRESETS = [
+  { label: '1x', value: 1 },           // 1 year/sec
+  { label: '10x', value: 10 },         // 10 years/sec
+  { label: '100x', value: 100 },       // 100 years/sec (century/sec)
+  { label: '1K', value: 1000 },        // 1000 years/sec
+  { label: '10K', value: 10000 },      // 10,000 years/sec
+  { label: '100K', value: 100000 },    // 100,000 years/sec
+];
+
+const MIN_YEAR = 2000;
+const MAX_YEAR = 2100;
+
 export default function Controls({
   heroRef,
   onTimeChange,
@@ -21,22 +35,22 @@ export default function Controls({
   onMotionChange,
   onPauseChange,
 }: ControlsProps) {
-  const [time, setTime] = useState(0.5);
+  const [year, setYear] = useState(2024.0);
+  const [speedIndex, setSpeedIndex] = useState(1); // Start at 10x
   const [direction, setDirection] = useState<Direction>(1);
   const [paused, setPaused] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
   const [announcement, setAnnouncement] = useState('');
   const sliderRef = useRef<HTMLInputElement>(null);
-  const lastTimeRef = useRef(0.5);
-  const targetTimeRef = useRef(0.5);
+  const currentYearRef = useRef(2024.0);
+  const targetYearRef = useRef(2024.0);
   const animationFrameRef = useRef<number | null>(null);
-  
-  // Speed up time - ~1 full Earth orbit every 20s
-  const AUTOPLAY_SPEED = 1 / 20; // normalized cycles per second
+
+  const speed = SPEED_PRESETS[speedIndex].value;
 
   useEffect(() => {
-    setAnnouncement('Direction: Apex. Time set to 0.5. Fast mode enabled.');
-    onTimeChange(0.5);
+    setAnnouncement(`Year: ${Math.floor(year)}. Speed: ${speed} years/sec.`);
+    onTimeChange(year);
   }, [onTimeChange]);
 
   useEffect(() => {
@@ -50,7 +64,7 @@ export default function Controls({
       if (reduced) {
         setAnnouncement('Motion off (respects your system setting).');
       }
-      heroRef.current?.updateScene(lastTimeRef.current, direction, !reduced && !paused);
+      heroRef.current?.updateScene(currentYearRef.current, direction, !reduced && !paused);
     });
 
     return cleanup;
@@ -62,7 +76,7 @@ export default function Controls({
         cancelAnimationFrame(animationFrameRef.current);
         animationFrameRef.current = null;
       }
-      heroRef.current?.updateScene(lastTimeRef.current, direction, false);
+      heroRef.current?.updateScene(currentYearRef.current, direction, false);
       return;
     }
 
@@ -73,26 +87,28 @@ export default function Controls({
       lastFrameTime = currentTime;
 
       // Smooth seek to target if user scrubbed
-      const current = lastTimeRef.current;
-      const target = targetTimeRef.current;
-      let finalTime: number;
-      if (Math.abs(current - target) > 0.001) {
-        finalTime = smoothSeek(current, target, dt);
-        lastTimeRef.current = finalTime;
-        setTime(finalTime);
-        onTimeChange(finalTime);
+      const current = currentYearRef.current;
+      const target = targetYearRef.current;
+      let finalYear: number;
+      
+      if (Math.abs(current - target) > 0.01) {
+        // Smooth interpolation to target year
+        const alpha = Math.min(0.15, dt * 5);
+        finalYear = current + (target - current) * alpha;
+        currentYearRef.current = finalYear;
+        setYear(finalYear);
+        onTimeChange(finalYear);
       } else {
-        // Fast auto-drift with AUTOPLAY_SPEED
-        finalTime = ((current + (dt * AUTOPLAY_SPEED) * direction + 1) % 1);
-        if (finalTime < 0) finalTime += 1;
-        lastTimeRef.current = finalTime;
-        targetTimeRef.current = finalTime;
-        setTime(finalTime);
-        onTimeChange(finalTime);
+        // Auto-advance time at selected speed
+        finalYear = current + (dt * speed * direction);
+        currentYearRef.current = finalYear;
+        targetYearRef.current = finalYear;
+        setYear(finalYear);
+        onTimeChange(finalYear);
       }
       
       // Update scene
-      heroRef.current?.updateScene(finalTime, direction, true);
+      heroRef.current?.updateScene(finalYear, direction, true);
 
       animationFrameRef.current = requestAnimationFrame(animate);
     }
@@ -104,31 +120,36 @@ export default function Controls({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [reduceMotion, paused, direction, onTimeChange]);
+  }, [reduceMotion, paused, direction, speed, onTimeChange]);
 
-  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleYearChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseFloat(e.target.value);
-    targetTimeRef.current = value;
-    lastTimeRef.current = value;
-    setTime(value);
+    targetYearRef.current = value;
+    currentYearRef.current = value;
+    setYear(value);
     onTimeChange(value);
     heroRef.current?.updateScene(value, direction, !reduceMotion && !paused);
+  };
+
+  const handleSpeedChange = (newIndex: number) => {
+    setSpeedIndex(newIndex);
+    setAnnouncement(`Speed: ${SPEED_PRESETS[newIndex].label} (${SPEED_PRESETS[newIndex].value} years/sec)`);
   };
 
   const handleDirectionToggle = () => {
     const newDirection = direction === 1 ? -1 : 1;
     setDirection(newDirection);
     onDirectionChange(newDirection);
-    setAnnouncement(`Direction: ${newDirection === 1 ? 'Apex' : 'Reverse'}`);
-    heroRef.current?.updateScene(lastTimeRef.current, newDirection, !reduceMotion && !paused);
+    setAnnouncement(`Direction: ${newDirection === 1 ? 'Forward' : 'Reverse'}`);
+    heroRef.current?.updateScene(currentYearRef.current, newDirection, !reduceMotion && !paused);
   };
 
   const handlePauseToggle = () => {
     const newPaused = !paused;
     setPaused(newPaused);
     onPauseChange(newPaused);
-    setAnnouncement(newPaused ? 'Background paused.' : 'Background resumed.');
-    heroRef.current?.updateScene(lastTimeRef.current, direction, !reduceMotion && !newPaused);
+    setAnnouncement(newPaused ? 'Paused.' : 'Resumed.');
+    heroRef.current?.updateScene(currentYearRef.current, direction, !reduceMotion && !newPaused);
   };
 
   const handleReduceMotionToggle = () => {
@@ -139,7 +160,7 @@ export default function Controls({
       if (newReduced) {
         setAnnouncement('Motion off (respects your system setting).');
       }
-      heroRef.current?.updateScene(lastTimeRef.current, direction, !newReduced && !paused);
+      heroRef.current?.updateScene(currentYearRef.current, direction, !newReduced && !paused);
     }
   };
 
@@ -150,84 +171,111 @@ export default function Controls({
   };
 
   const motionDisabled = reduceMotion || paused;
+  const yearPercent = ((year - MIN_YEAR) / (MAX_YEAR - MIN_YEAR)) * 100;
 
   useEffect(() => {
     if (!heroRef.current) return;
-    heroRef.current.updateScene(lastTimeRef.current, direction, !reduceMotion && !paused);
+    heroRef.current.updateScene(currentYearRef.current, direction, !reduceMotion && !paused);
   }, [direction, reduceMotion, paused, heroRef]);
 
   return (
-    <div 
-      className="fixed top-4 right-4 z-40 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 rounded-2xl bg-black/40 backdrop-blur border border-white/10 p-2 shadow-lg"
-      role="region"
-      aria-label="Simulation controls">
-      {/* Time Slider */}
-      <div className="flex items-center gap-2">
-        <label htmlFor="time-slider" className="text-xs text-white/70 sr-only sm:not-sr-only">
-          Time
-        </label>
-        <input
-          id="time-slider"
-          ref={sliderRef}
-          type="range"
-          min="0"
-          max="1"
-          step="0.001"
-          value={time}
-          onChange={handleTimeChange}
-          onKeyDown={handleSliderKeyDown}
-          disabled={motionDisabled}
-          aria-label="Time"
-          title="Scrub the solar drift."
-          className="w-24 sm:w-32 h-1.5 bg-white/20 rounded-lg appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-white/50"
-          style={{
-            background: `linear-gradient(to right, #ffffff 0%, #ffffff ${time * 100}%, rgba(255, 255, 255, 0.2) ${time * 100}%, rgba(255, 255, 255, 0.2) 100%)`,
-          }}
-        />
+    <>
+      {/* Date Display */}
+      <DateDisplay year={year} speed={speed} />
+
+      {/* Controls */}
+      <div 
+        className="fixed top-4 right-4 z-40 flex flex-col gap-2 rounded-2xl bg-black/40 backdrop-blur border border-white/10 p-3 shadow-lg"
+        role="region"
+        aria-label="Simulation controls">
+        
+        {/* Year Slider */}
+        <div className="flex flex-col gap-1">
+          <label htmlFor="year-slider" className="text-xs text-white/70">
+            Year: {Math.floor(year).toFixed(0)}
+          </label>
+          <input
+            id="year-slider"
+            ref={sliderRef}
+            type="range"
+            min={MIN_YEAR}
+            max={MAX_YEAR}
+            step="0.1"
+            value={year}
+            onChange={handleYearChange}
+            onKeyDown={handleSliderKeyDown}
+            disabled={motionDisabled}
+            aria-label="Year"
+            title="Scrub through years"
+            className="w-48 h-1.5 bg-white/20 rounded-lg appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-white/50"
+            style={{
+              background: `linear-gradient(to right, #ffffff 0%, #ffffff ${yearPercent}%, rgba(255, 255, 255, 0.2) ${yearPercent}%, rgba(255, 255, 255, 0.2) 100%)`,
+            }}
+          />
+        </div>
+
+        {/* Speed Controls */}
+        <div className="flex flex-wrap gap-1">
+          {SPEED_PRESETS.map((preset, index) => (
+            <button
+              key={index}
+              onClick={() => handleSpeedChange(index)}
+              disabled={motionDisabled}
+              aria-label={`Set speed to ${preset.label}`}
+              title={`${preset.value} years per second`}
+              className={`px-2 py-1 text-xs text-white border rounded transition-colors ${
+                speedIndex === index
+                  ? 'bg-white/30 border-white/40'
+                  : 'bg-white/10 border-white/20 hover:bg-white/20'
+              } disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-white/50`}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Direction and Control Buttons */}
+        <div className="flex flex-wrap gap-1">
+          <button
+            onClick={handleDirectionToggle}
+            disabled={motionDisabled}
+            aria-label="Switch travel direction"
+            title="Switch travel direction"
+            className="px-2 py-1 text-xs text-white bg-white/10 border border-white/20 rounded hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-white/50 transition-colors"
+          >
+            {direction === 1 ? '▶' : '◀'}
+          </button>
+
+          <button
+            onClick={handlePauseToggle}
+            disabled={reduceMotion}
+            aria-label={paused ? 'Resume' : 'Pause'}
+            title={paused ? 'Resume' : 'Pause'}
+            className="px-2 py-1 text-xs text-white bg-white/10 border border-white/20 rounded hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-white/50 transition-colors"
+          >
+            {paused ? '▶' : '⏸'}
+          </button>
+
+          <button
+            onClick={handleReduceMotionToggle}
+            disabled={getPrefersReducedMotion()}
+            aria-label="Disable background motion"
+            title={reduceMotion ? 'Motion off' : 'Disable background motion'}
+            className="px-2 py-1 text-xs text-white bg-white/10 border border-white/20 rounded hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-white/50 transition-colors"
+          >
+            {reduceMotion ? 'Motion off' : 'Reduce'}
+          </button>
+        </div>
+
+        {/* Aria-live announcements */}
+        <div
+          aria-live="polite"
+          aria-atomic="true"
+          className="sr-only"
+        >
+          {announcement}
+        </div>
       </div>
-
-      {/* Direction Toggle */}
-      <button
-        onClick={handleDirectionToggle}
-        disabled={motionDisabled}
-        aria-label="Switch travel direction"
-        title="Switch travel direction"
-        className="px-2 sm:px-3 py-1 text-xs sm:text-sm text-white bg-white/10 border border-white/20 rounded-lg hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-white/50 transition-colors"
-      >
-        {direction === 1 ? 'Apex →' : 'Reverse ←'}
-      </button>
-
-      {/* Pause Button */}
-      <button
-        onClick={handlePauseToggle}
-        disabled={reduceMotion}
-        aria-label={paused ? 'Resume background' : 'Pause background'}
-        title={paused ? 'Resume background' : 'Pause background'}
-        className="px-2 sm:px-3 py-1 text-xs sm:text-sm text-white bg-white/10 border border-white/20 rounded-lg hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-white/50 transition-colors"
-      >
-        {paused ? 'Resume' : 'Pause'}
-      </button>
-
-      {/* Reduce Motion Toggle */}
-      <button
-        onClick={handleReduceMotionToggle}
-        disabled={getPrefersReducedMotion()}
-        aria-label="Disable background motion"
-        title={reduceMotion ? 'Motion off' : 'Disable background motion'}
-        className="px-2 sm:px-3 py-1 text-xs sm:text-sm text-white bg-white/10 border border-white/20 rounded-lg hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-white/50 transition-colors"
-      >
-        {reduceMotion ? 'Motion off' : 'Reduce motion'}
-      </button>
-
-      {/* Aria-live announcements */}
-      <div
-        aria-live="polite"
-        aria-atomic="true"
-        className="sr-only"
-      >
-        {announcement}
-      </div>
-    </div>
+    </>
   );
 }
-

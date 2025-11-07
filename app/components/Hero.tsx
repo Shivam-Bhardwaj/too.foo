@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 're
 import { createScene, SceneAPI } from '../lib/heliosphereScene';
 
 export type HeroRef = {
-  updateScene: (normTime: number, direction: 1 | -1, motionEnabled: boolean) => void;
+  updateScene: (year: number, direction: 1 | -1, motionEnabled: boolean) => void;
 };
 
 const Hero = forwardRef<HeroRef>((props, ref) => {
@@ -14,9 +14,9 @@ const Hero = forwardRef<HeroRef>((props, ref) => {
   const [initFailed, setInitFailed] = useState(false);
 
   useImperativeHandle(ref, () => ({
-    updateScene: (normTime: number, direction: 1 | -1, motionEnabled: boolean) => {
+    updateScene: (year: number, direction: 1 | -1, motionEnabled: boolean) => {
       if (sceneRef.current) {
-        sceneRef.current.update(normTime, direction, motionEnabled);
+        sceneRef.current.update(year, direction, motionEnabled);
       }
     },
   }));
@@ -46,8 +46,8 @@ const Hero = forwardRef<HeroRef>((props, ref) => {
       handleResize();
       window.addEventListener('resize', handleResize);
       
-      // Initial render with Earth at phase 0.5 and no drift
-      scene.update(0.5, 1, false);
+      // Initial render with current year (2024) and no drift
+      scene.update(2024.0, 1, false);
 
       return () => {
         window.removeEventListener('resize', handleResize);
