@@ -65,7 +65,7 @@ export default function DateDisplay({ year, speed }: DateDisplayProps) {
   };
 
   return (
-    <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 bg-black/60 backdrop-blur-sm border border-white/20 rounded-lg px-6 py-4 shadow-lg">
+    <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-black/60 backdrop-blur-sm border border-white/20 rounded-lg px-6 py-4 shadow-lg">
       <div className="flex flex-col gap-1 items-center">
         <div className="text-3xl md:text-4xl font-mono font-light text-white">
           {formatStandardTime(year)}

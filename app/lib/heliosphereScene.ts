@@ -315,52 +315,102 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   const sunGlow = new THREE.Mesh(sunGlowGeometry, sunGlowMaterial);
   sol.add(sunGlow);
   
-  // ===== Solar Wind Particles =====
-  // Solar wind streams outward from the Sun in all directions
-  const solarWindCount = 2000;
-  const solarWindGeo = new THREE.BufferGeometry();
-  const solarWindPositions = new Float32Array(solarWindCount * 3);
-  const solarWindVelocities = new Float32Array(solarWindCount * 3);
-  const solarWindColors = new Float32Array(solarWindCount * 3);
-  const solarWindAges = new Float32Array(solarWindCount);
+  // ===== Solar Wind Streams (fine threads) =====
+  // Solar wind streams outward from the Sun and curves when hitting interstellar medium
+  const solarWindGroup = new THREE.Group();
+  sol.add(solarWindGroup);
   
-  for (let i = 0; i < solarWindCount; i++) {
+  const HELIOPAUSE_RADIUS = 3.6; // Heliosphere boundary
+  const SOLAR_WIND_STREAMS = 120; // Number of fine thread streams
+  
+  interface SolarWindStream {
+    direction: THREE.Vector3;
+    points: THREE.Vector3[];
+    line: THREE.Line;
+    age: number;
+  }
+  
+  const solarWindStreams: SolarWindStream[] = [];
+  
+  // Create fine thread-like streams
+  for (let i = 0; i < SOLAR_WIND_STREAMS; i++) {
     // Random direction from sun
     const theta = Math.random() * Math.PI * 2;
     const phi = Math.acos(2 * Math.random() - 1);
-    const speed = 0.02 + Math.random() * 0.03; // Solar wind speed
+    const direction = new THREE.Vector3(
+      Math.sin(phi) * Math.cos(theta),
+      Math.sin(phi) * Math.sin(theta),
+      Math.cos(phi)
+    ).normalize();
     
-    solarWindVelocities[i * 3 + 0] = Math.sin(phi) * Math.cos(theta) * speed;
-    solarWindVelocities[i * 3 + 1] = Math.sin(phi) * Math.sin(theta) * speed;
-    solarWindVelocities[i * 3 + 2] = Math.cos(phi) * speed;
+    // Create stream with multiple points for smooth curves
+    const streamPoints: THREE.Vector3[] = [];
+    const segments = 40; // Points per stream for smooth curves
     
-    // Start at sun surface
-    solarWindPositions[i * 3 + 0] = solarWindVelocities[i * 3 + 0] * 0.5;
-    solarWindPositions[i * 3 + 1] = solarWindVelocities[i * 3 + 1] * 0.5;
-    solarWindPositions[i * 3 + 2] = solarWindVelocities[i * 3 + 2] * 0.5;
+    for (let j = 0; j <= segments; j++) {
+      const t = j / segments;
+      const distance = t * 6; // Stream extends 6 units
+      
+      // Start from sun surface
+      const basePos = direction.clone().multiplyScalar(0.5 + distance);
+      
+      // Physics: Curve when hitting heliopause (interstellar medium interaction)
+      if (distance > HELIOPAUSE_RADIUS) {
+        // Beyond heliopause - curve due to ISM pressure and flow
+        const excessDist = distance - HELIOPAUSE_RADIUS;
+        const curveAmount = Math.min(excessDist * 0.2, 1.5); // Maximum curvature
+        
+        // Interstellar wind flows from +X direction, deflects solar wind
+        // Calculate deflection based on relative velocity
+        const ismFlowDir = new THREE.Vector3(-1, 0, 0); // ISM flows toward -X
+        
+        // Deflect perpendicular to both solar wind direction and ISM flow
+        const perp1 = new THREE.Vector3().crossVectors(direction, ismFlowDir).normalize();
+        if (perp1.length() < 0.1) {
+          // If parallel, use arbitrary perpendicular
+          perp1.set(-direction.y, direction.x, 0).normalize();
+        }
+        const perp2 = new THREE.Vector3().crossVectors(direction, perp1).normalize();
+        
+        // Curved deflection - stronger near heliopause, weaker further out
+        const deflectionStrength = curveAmount * Math.exp(-excessDist * 0.3);
+        const deflection = perp1.clone().multiplyScalar(
+          Math.sin(excessDist * 1.5) * deflectionStrength
+        ).add(
+          perp2.clone().multiplyScalar(
+            Math.cos(excessDist * 1.5) * deflectionStrength * 0.6
+          )
+        );
+        
+        // Also slow down (compress) when hitting ISM
+        const slowdown = 1.0 - Math.min(excessDist * 0.1, 0.3);
+        basePos.multiplyScalar(1.0 + (1.0 - slowdown) * 0.2);
+        
+        basePos.add(deflection);
+      }
+      
+      streamPoints.push(basePos.clone());
+    }
     
-    // Solar wind color (yellow-white plasma)
-    solarWindColors[i * 3 + 0] = 1.0;
-    solarWindColors[i * 3 + 1] = 0.95;
-    solarWindColors[i * 3 + 2] = 0.8;
+    // Create line geometry for fine threads
+    const geometry = new THREE.BufferGeometry().setFromPoints(streamPoints);
+    const material = new THREE.LineBasicMaterial({
+      color: 0xffffaa,
+      transparent: true,
+      opacity: 0.5,
+      linewidth: 0.5  // Very fine threads
+    });
     
-    solarWindAges[i] = Math.random(); // Random age
+    const line = new THREE.Line(geometry, material);
+    solarWindGroup.add(line);
+    
+    solarWindStreams.push({
+      direction: direction,
+      points: streamPoints,
+      line: line,
+      age: Math.random()
+    });
   }
-  
-  solarWindGeo.setAttribute('position', new THREE.BufferAttribute(solarWindPositions, 3));
-  solarWindGeo.setAttribute('color', new THREE.BufferAttribute(solarWindColors, 3));
-  
-  const solarWindMat = new THREE.PointsMaterial({
-    size: 0.025,  // Larger particles
-    transparent: true,
-    opacity: 0.9,  // Much brighter
-    vertexColors: true,
-    sizeAttenuation: true,
-    blending: THREE.AdditiveBlending
-  });
-  
-  const solarWind = new THREE.Points(solarWindGeo, solarWindMat);
-  sol.add(solarWind);
 
   // Brighter lighting for better visibility
   scene.add(new THREE.AmbientLight(0xffffff, 0.3));  // Increased ambient
@@ -627,30 +677,66 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     // Planet placement (planets orbit within heliosphere)
     placePlanets(currentYear);
 
-    // Animate solar wind particles
+    // Animate solar wind streams (flow outward and curve at heliopause)
     if (motionEnabled) {
-      const solarWindPos = solarWindGeo.attributes.position.array as Float32Array;
-      for (let i = 0; i < solarWindCount; i++) {
-        const idx = i * 3;
-        // Update position based on velocity
-        solarWindPos[idx + 0] += solarWindVelocities[idx + 0];
-        solarWindPos[idx + 1] += solarWindVelocities[idx + 1];
-        solarWindPos[idx + 2] += solarWindVelocities[idx + 2];
+      let streamTime = (currentYear % 1) * 0.1; // Slow animation based on year
+      
+      solarWindStreams.forEach((stream, i) => {
+        // Update stream points to show flow
+        const segments = 40;
+        const newPoints: THREE.Vector3[] = [];
         
-        // Reset particles that have traveled too far
-        const dist = Math.sqrt(
-          solarWindPos[idx + 0] ** 2 + 
-          solarWindPos[idx + 1] ** 2 + 
-          solarWindPos[idx + 2] ** 2
-        );
-        if (dist > 5) {
-          // Reset to sun surface
-          solarWindPos[idx + 0] = solarWindVelocities[idx + 0] * 0.5;
-          solarWindPos[idx + 1] = solarWindVelocities[idx + 1] * 0.5;
-          solarWindPos[idx + 2] = solarWindVelocities[idx + 2] * 0.5;
+        for (let j = 0; j <= segments; j++) {
+          const t = j / segments;
+          const distance = t * 6;
+          
+          // Add time-based flow offset
+          const flowOffset = streamTime * 0.5;
+          const effectiveDist = distance + flowOffset;
+          
+          // Start from sun surface
+          const basePos = stream.direction.clone().multiplyScalar(0.5 + effectiveDist);
+          
+          // Physics: Curve when hitting heliopause
+          if (effectiveDist > HELIOPAUSE_RADIUS) {
+            const excessDist = effectiveDist - HELIOPAUSE_RADIUS;
+            const curveAmount = Math.min(excessDist * 0.2, 1.5);
+            
+            // Interstellar wind flows from +X, deflects solar wind
+            const ismFlowDir = new THREE.Vector3(-1, 0, 0);
+            
+            // Deflect perpendicular to both directions
+            const perp1 = new THREE.Vector3().crossVectors(stream.direction, ismFlowDir).normalize();
+            if (perp1.length() < 0.1) {
+              perp1.set(-stream.direction.y, stream.direction.x, 0).normalize();
+            }
+            const perp2 = new THREE.Vector3().crossVectors(stream.direction, perp1).normalize();
+            
+            // Curved deflection with exponential decay
+            const deflectionStrength = curveAmount * Math.exp(-excessDist * 0.3);
+            const phase = excessDist * 1.5 + stream.age * Math.PI * 2;
+            const deflection = perp1.clone().multiplyScalar(
+              Math.sin(phase) * deflectionStrength
+            ).add(
+              perp2.clone().multiplyScalar(
+                Math.cos(phase) * deflectionStrength * 0.6
+              )
+            );
+            
+            // Slow down when hitting ISM
+            const slowdown = 1.0 - Math.min(excessDist * 0.1, 0.3);
+            basePos.multiplyScalar(1.0 + (1.0 - slowdown) * 0.2);
+            
+            basePos.add(deflection);
+          }
+          
+          newPoints.push(basePos);
         }
-      }
-      solarWindGeo.attributes.position.needsUpdate = true;
+        
+        // Update line geometry
+        stream.line.geometry.setFromPoints(newPoints);
+        stream.line.geometry.attributes.position.needsUpdate = true;
+      });
       
       // Animate interstellar wind particles
       const ismWindPos = ismWindGeo.attributes.position.array as Float32Array;
