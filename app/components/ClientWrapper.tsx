@@ -3,6 +3,7 @@
 import { useRef } from 'react';
 import Hero, { HeroRef } from './Hero';
 import Controls from './Controls';
+import LayerControl from './LayerControl';
 
 export default function ClientWrapper() {
   const heroRef = useRef<HeroRef>(null);
@@ -35,6 +36,7 @@ export default function ClientWrapper() {
         onMotionChange={handleMotionChange}
         onPauseChange={handlePauseChange}
       />
+      <LayerControl heroRef={heroRef} />
     </>
   );
 }

@@ -13,11 +13,26 @@ import {
 
 type Direction = 1 | -1;
 
+export type ComponentVisibility = {
+  heliosphere: boolean;
+  helioglow: boolean;
+  terminationShock: boolean;
+  solarWind: boolean;
+  interstellarWind: boolean;
+  planets: boolean;
+  orbits: boolean;
+  moon: boolean;
+  stars: boolean;
+  famousStars: boolean;
+};
+
 export type SceneAPI = {
   canvas: HTMLCanvasElement;
   update: (year: number, direction: Direction, motionEnabled: boolean) => void;
   resize: (w: number, h: number) => void;
   dispose: () => void;
+  toggleComponent: (component: keyof ComponentVisibility, visible: boolean) => void;
+  getVisibility: () => ComponentVisibility;
 };
 
 export function createScene(canvas: HTMLCanvasElement): SceneAPI {
@@ -122,10 +137,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     starGeo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
   }
   const stars = new THREE.Points(starGeo, starMat);
+  stars.name = 'stars';
   scene.add(stars);
   
   // ===== Famous Stars (labeled landmarks) =====
   const famousStarsGroup = new THREE.Group();
+  famousStarsGroup.name = 'famousStars';
   FAMOUS_STARS.forEach((star) => {
     const [x, y, z] = raDecToCartesian(star.ra, star.dec, star.distance * 0.1); // Scale distance
     const pos = new THREE.Vector3(x, y, z).applyMatrix4(apexBasis);
@@ -235,22 +252,24 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     
     const mesh = new THREE.Mesh(g, m);
     mesh.setRotationFromMatrix(apexBasis); // nose → +X (upwind direction)
+    mesh.name = 'heliosphere';
     scene.add(mesh);
     
-    // Add brighter helioglow effect (faint emission from UV interactions)
+    // Add subtle helioglow effect (faint emission from UV interactions)
     const glowGeometry = g.clone();
-    glowGeometry.scale(1.15, 1.15, 1.15); // Slightly larger
+    glowGeometry.scale(1.1, 1.1, 1.1); // Slightly larger
     const glowMaterial = new THREE.MeshBasicMaterial({
-      color: new THREE.Color(0x3a5a7a),
+      color: new THREE.Color(0x2a4a6a),
       transparent: true,
-      opacity: 0.2,  // More visible glow
+      opacity: 0.08,  // Very subtle glow
       side: THREE.DoubleSide
     });
     const glow = new THREE.Mesh(glowGeometry, glowMaterial);
     glow.setRotationFromMatrix(apexBasis);
+    glow.name = 'helioglow';
     scene.add(glow);
     
-    return mesh;
+    return { mesh, glow };
   })();
   
   // ===== Interstellar Wind Particles =====
@@ -296,6 +315,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   });
   
   const ismWind = new THREE.Points(ismWindGeo, ismWindMat);
+  ismWind.name = 'interstellarWind';
   scene.add(ismWind);
 
   // ===== Solar system (MOVES sideways through heliosphere) =====
@@ -326,6 +346,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   // ===== Solar Wind Streams (fine threads with accurate physics) =====
   // Solar wind streams outward from the Sun and curves when hitting interstellar medium
   const solarWindGroup = new THREE.Group();
+  solarWindGroup.name = 'solarWind';
   sol.add(solarWindGroup);
   
   const SOLAR_WIND_STREAMS = 150; // More streams for better visualization
@@ -450,6 +471,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   // ===== Termination Shock Visualization =====
   // Show the boundary where solar wind slows from supersonic to subsonic
   const terminationShockGroup = new THREE.Group();
+  terminationShockGroup.name = 'terminationShock';
   scene.add(terminationShockGroup);
   
   // Create termination shock surface (simplified visualization)
@@ -511,7 +533,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   
   scene.add(referenceGroup);
 
-  // Orbits (thin), tilted by ecliptic
+  // Orbits group (thin), tilted by ecliptic
+  const orbitsGroup = new THREE.Group();
+  orbitsGroup.name = 'orbits';
+  sol.add(orbitsGroup);
+  
   function makeOrbit(radius: number) {
     const pts = 256;
     const geom = new THREE.BufferGeometry().setFromPoints(
@@ -525,7 +551,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
       new THREE.LineBasicMaterial({ color: 0x80d8ff, transparent: true, opacity: 0.07 })
     );
     line.rotation.z = ECLIPTIC_TILT;
-    sol.add(line);
+    orbitsGroup.add(line);
     return line;
   }
 
@@ -554,6 +580,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   } as const;
 
   // Create planets + orbits with more realistic materials
+  const planetsGroup = new THREE.Group();
+  planetsGroup.name = 'planets';
+  sol.add(planetsGroup);
+  
   const planetMeshes: Record<string, THREE.Mesh> = {};
   const earthMeshRef: { current: THREE.Mesh | null } = { current: null };
   
@@ -632,7 +662,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     mesh.userData.radius = R;
     mesh.userData.period = PERIOD_Y[name as keyof typeof PERIOD_Y];
     mesh.rotation.z = ECLIPTIC_TILT;
-    sol.add(mesh);
+    planetsGroup.add(mesh);
     planetMeshes[name] = mesh;
     
     // Store Earth reference for Moon
@@ -643,6 +673,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   
   // ===== Moon orbiting Earth =====
   const moonGroup = new THREE.Group();
+  moonGroup.name = 'moon';
   sol.add(moonGroup);
   
   const moonGeometry = new THREE.SphereGeometry(0.02, 16, 16);
@@ -660,6 +691,20 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   const MOON_PERIOD_DAYS = 27.32; // Sidereal month in days
   const MOON_PERIOD_YEARS = MOON_PERIOD_DAYS / 365.25;
 
+  // ==== Component visibility state (astronomer controls) ====
+  const visibility: ComponentVisibility = {
+    heliosphere: true,
+    helioglow: true,
+    terminationShock: true,
+    solarWind: true,
+    interstellarWind: true,
+    planets: true,
+    orbits: true,
+    moon: true,
+    stars: true,
+    famousStars: true,
+  };
+  
   // ==== Animation state ====
   let currentYear = 2024.0;   // Start at current year (can be adjusted)
   let driftX = 0;              // solar-system sideways drift inside fixed heliosphere
@@ -876,6 +921,48 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     starGeo.dispose();
     starMat.dispose();
   }
+  
+  // Toggle component visibility (astronomer controls)
+  function toggleComponent(component: keyof ComponentVisibility, visible: boolean) {
+    visibility[component] = visible;
+    
+    switch(component) {
+      case 'heliosphere':
+        helio.mesh.visible = visible;
+        break;
+      case 'helioglow':
+        helio.glow.visible = visible;
+        break;
+      case 'terminationShock':
+        terminationShockGroup.visible = visible;
+        break;
+      case 'solarWind':
+        solarWindGroup.visible = visible;
+        break;
+      case 'interstellarWind':
+        ismWind.visible = visible;
+        break;
+      case 'planets':
+        planetsGroup.visible = visible;
+        break;
+      case 'orbits':
+        orbitsGroup.visible = visible;
+        break;
+      case 'moon':
+        moonGroup.visible = visible;
+        break;
+      case 'stars':
+        stars.visible = visible;
+        break;
+      case 'famousStars':
+        famousStarsGroup.visible = visible;
+        break;
+    }
+  }
+  
+  function getVisibility(): ComponentVisibility {
+    return { ...visibility };
+  }
 
-  return { canvas, update, resize, dispose };
+  return { canvas, update, resize, dispose, toggleComponent, getVisibility };
 }

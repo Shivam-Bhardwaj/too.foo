@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react';
-import { createScene, SceneAPI } from '../lib/heliosphereScene';
+import { createScene, SceneAPI, ComponentVisibility } from '../lib/heliosphereScene';
 
 export type HeroRef = {
   updateScene: (year: number, direction: 1 | -1, motionEnabled: boolean) => void;
+  toggleComponent: (component: keyof ComponentVisibility, visible: boolean) => void;
+  getVisibility: () => ComponentVisibility;
 };
 
 const Hero = forwardRef<HeroRef>((props, ref) => {
@@ -18,6 +20,28 @@ const Hero = forwardRef<HeroRef>((props, ref) => {
       if (sceneRef.current) {
         sceneRef.current.update(year, direction, motionEnabled);
       }
+    },
+    toggleComponent: (component: keyof ComponentVisibility, visible: boolean) => {
+      if (sceneRef.current) {
+        sceneRef.current.toggleComponent(component, visible);
+      }
+    },
+    getVisibility: () => {
+      if (sceneRef.current) {
+        return sceneRef.current.getVisibility();
+      }
+      return {
+        heliosphere: true,
+        helioglow: true,
+        terminationShock: true,
+        solarWind: true,
+        interstellarWind: true,
+        planets: true,
+        orbits: true,
+        moon: true,
+        stars: true,
+        famousStars: true,
+      };
     },
   }));
 
