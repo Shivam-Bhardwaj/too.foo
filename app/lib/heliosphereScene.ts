@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { basisFromApex, ECLIPTIC_TILT, PHYSICAL_SCALES, HELIOSPHERE_NOSE } from "./apex";
 import { FAMOUS_STARS, raDecToCartesian } from "./starCatalog";
 
@@ -23,10 +24,22 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   camera.position.set(0, 2.2, 10);
   camera.lookAt(0, 0, 0);
   
-  // Camera panning state
+  // Interactive camera controls
+  const controls = new OrbitControls(camera, canvas);
+  controls.enableDamping = true; // Smooth camera movement
+  controls.dampingFactor = 0.05;
+  controls.enableZoom = true;
+  controls.enablePan = true;
+  controls.minDistance = 3; // Don't zoom too close
+  controls.maxDistance = 50; // Don't zoom too far
+  controls.target.set(0, 0, 0); // Look at heliosphere center
+  controls.update();
+  
+  // Camera panning state (optional auto-panning)
   let cameraTime = 0;
   const cameraRadius = 12;
   const cameraSpeed = 0.0001; // Slow panning
+  let autoPanning = false; // Disabled by default, user controls camera
 
   // ===== Fixed heliosphere basis (screen +X = upwind/nose direction) =====
   // The heliosphere nose points into the interstellar wind at ecliptic λ≈255.4°, β≈5.2°
@@ -541,14 +554,19 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
       // Optional: minimal solar system drift within heliosphere (ISM interaction)
       driftX += SOLAR_DRIFT_SPEED * direction;
       
-      // Camera panning - slow orbital motion around heliosphere
-      cameraTime += cameraSpeed;
-      const camAngle = cameraTime;
-      camera.position.x = Math.cos(camAngle) * cameraRadius;
-      camera.position.y = 2.2 + Math.sin(camAngle * 0.5) * 1.5;
-      camera.position.z = Math.sin(camAngle) * cameraRadius;
-      camera.lookAt(0, 0, 0);
+      // Optional auto-panning (disabled by default - user controls camera)
+      if (autoPanning) {
+        cameraTime += cameraSpeed;
+        const camAngle = cameraTime;
+        camera.position.x = Math.cos(camAngle) * cameraRadius;
+        camera.position.y = 2.2 + Math.sin(camAngle * 0.5) * 1.5;
+        camera.position.z = Math.sin(camAngle) * cameraRadius;
+        camera.lookAt(0, 0, 0);
+      }
     }
+    
+    // Update camera controls (for smooth damping)
+    controls.update();
     
     // Solar system has minimal drift within fixed heliosphere
     sol.position.set(driftX, 0, 0);
@@ -569,6 +587,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   }
 
   function dispose() {
+    controls.dispose();
     renderer.dispose();
     starGeo.dispose();
     starMat.dispose();
