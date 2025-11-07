@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import ResearchGradeHero, { ResearchHeroRef } from './ResearchGradeHero';
 import LayerControl from './LayerControl';
 import { ComponentVisibility } from '../lib/ResearchGradeHeliosphereScene';
@@ -165,12 +165,22 @@ function ResearchLayerControl({ heroRef }: ResearchLayerControlProps) {
 export default function ResearchGradeClientWrapper() {
   const heroRef = useRef<ResearchHeroRef>(null);
   const [showInfo, setShowInfo] = useState(true);
+  const [currentDate, setCurrentDate] = useState<Date>(new Date());
+
+  // Callback to receive date updates from ResearchGradeHero
+  const handleDateChange = useCallback((date: Date) => {
+    setCurrentDate(date);
+    // Update the date display component via custom event
+    window.dispatchEvent(new CustomEvent('research-date-update', { detail: date }));
+  }, []);
 
   return (
     <>
+      {/* Simulation canvas */}
       <div className="absolute inset-0 z-0">
-        <ResearchGradeHero ref={heroRef} />
+        <ResearchGradeHero ref={heroRef} onDateChange={handleDateChange} />
       </div>
+      
       <ResearchLayerControl heroRef={heroRef} />
       
       {/* Information panel */}

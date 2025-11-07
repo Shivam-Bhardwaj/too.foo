@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import ResearchGradeClientWrapper from '../components/ResearchGradeClientWrapper';
+import ResearchDateDisplay from '../components/ResearchDateDisplay';
 
 export const metadata: Metadata = {
   title: 'Heliosphere Research Visualization — Scientific Accuracy',
@@ -19,41 +20,40 @@ export const metadata: Metadata = {
 
 export default function ResearchPage() {
   return (
-    <main className="min-h-screen bg-black text-white relative overflow-hidden">
-      {/* Deep space background */}
-      <div className="absolute inset-0 pointer-events-none z-0" style={{
-        background: 'radial-gradient(circle at center, transparent 0%, rgba(0, 0, 0, 0.3) 90%, rgba(0, 0, 0, 0.5) 100%)',
-      }} />
+    <main className="min-h-screen bg-black text-white flex flex-col">
+      {/* 1. Header */}
+      <header className="flex-shrink-0 py-4 px-4 text-center border-b border-white/10">
+        <h1 className="text-2xl font-bold text-white/90">
+          Research-Grade Heliosphere
+        </h1>
+        <p className="text-sm text-white/70 mt-1">
+          NASA JPL Ephemerides • Voyager Mission Data • MHD Physics
+        </p>
+      </header>
 
-      {/* Main content */}
-      <section className="relative min-h-screen flex flex-col items-center justify-center">
-        {/* WebGL Canvas - Full background */}
-        <div className="absolute inset-0 z-0">
+      {/* 2. Text Section (Date) */}
+      <div className="flex-shrink-0 py-3 px-4 text-center border-b border-white/10" data-section="text">
+        <ResearchDateDisplay />
+      </div>
+
+      {/* 3. Simulation Section */}
+      <section className="flex-1 relative min-h-0">
+        <div className="absolute inset-0">
           <ResearchGradeClientWrapper />
         </div>
+      </section>
 
-        {/* Title overlay */}
-        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20 text-center">
-          <h1 className="text-2xl font-bold text-white/90 drop-shadow-lg">
-            Research-Grade Heliosphere
-          </h1>
-          <p className="text-sm text-white/70 mt-1">
-            NASA JPL Ephemerides • Voyager Mission Data • MHD Physics
-          </p>
-        </div>
-
-        {/* Attribution */}
-        <div className="fixed bottom-4 left-4 z-10 text-xs text-white/40">
+      {/* 4. Footer */}
+      <footer className="flex-shrink-0 py-4 px-4 border-t border-white/10 flex justify-between items-center text-xs text-white/40">
+        <div>
           <p>Data: NASA/JPL, Voyager, IBEX</p>
           <p>Model: Opher et al. 2020</p>
         </div>
-
-        {/* Controls hint */}
-        <div className="fixed bottom-4 right-4 z-10 text-xs text-white/40 text-right">
+        <div className="text-right">
           <p>Mouse: Rotate • Scroll: Zoom • Drag: Pan</p>
           <p>Space: Play/Pause • ←→: Skip</p>
         </div>
-      </section>
+      </footer>
 
       {/* Scientific disclaimer */}
       <div className="sr-only">

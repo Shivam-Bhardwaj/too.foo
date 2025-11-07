@@ -16,7 +16,12 @@ export type ResearchHeroRef = {
   getCurrentDate: () => Date;
 };
 
-const ResearchGradeHero = forwardRef<ResearchHeroRef>((props, ref) => {
+interface ResearchGradeHeroProps {
+  onDateChange?: (date: Date) => void;
+}
+
+const ResearchGradeHero = forwardRef<ResearchHeroRef, ResearchGradeHeroProps>((props, ref) => {
+  const { onDateChange } = props;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneRef = useRef<SceneAPI | null>(null);
   const animationFrameRef = useRef<number | null>(null);
@@ -153,6 +158,12 @@ const ResearchGradeHero = forwardRef<ResearchHeroRef>((props, ref) => {
         // Initial render
         // When not playing, just update the scene without advancing time
         scene.update(currentDateRef.current, 0, false);
+        
+        // Notify parent component of initial date
+        if (onDateChange) {
+          onDateChange(currentDateRef.current);
+        }
+        
         setLoading(false);
         if (canvasRef.current) {
           canvasRef.current.dataset.sceneReady = 'true';
@@ -189,7 +200,7 @@ const ResearchGradeHero = forwardRef<ResearchHeroRef>((props, ref) => {
         cleanupFn();
       }
     };
-  }, []);
+  }, [onDateChange]);
 
   // Update data overlay - memoized to avoid stale closures
   const updateDataOverlay = useCallback((date: Date) => {
@@ -291,6 +302,11 @@ const ResearchGradeHero = forwardRef<ResearchHeroRef>((props, ref) => {
         // Update state (but don't depend on it in this effect)
         setCurrentDate(newDate);
         
+        // Notify parent component of date change
+        if (onDateChange) {
+          onDateChange(newDate);
+        }
+        
         // Update scene
         if (sceneRef.current) {
           sceneRef.current.update(newDate, speed, true);
@@ -333,6 +349,12 @@ const ResearchGradeHero = forwardRef<ResearchHeroRef>((props, ref) => {
   const handleDateChange = (date: Date) => {
     currentDateRef.current = date;
     setCurrentDate(date);
+    
+    // Notify parent component of date change
+    if (onDateChange) {
+      onDateChange(date);
+    }
+    
     if (sceneRef.current) {
       try {
         sceneRef.current.update(date, timeSpeedRef.current, false);
@@ -354,6 +376,12 @@ const ResearchGradeHero = forwardRef<ResearchHeroRef>((props, ref) => {
       sceneRef.current.setTimeMode(mode);
       const newDate = sceneRef.current.getCurrentDate();
       setCurrentDate(newDate);
+      
+      // Notify parent component of date change
+      if (onDateChange) {
+        onDateChange(newDate);
+      }
+      
       updateDataOverlay(newDate);
     }
   };

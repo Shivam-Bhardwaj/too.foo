@@ -72,3 +72,14 @@ input[type="range"]:focus::-moz-range-thumb {
   outline-offset: 2px;
 }
 
+/* Hide centered date displays that overlap the simulation */
+/* Target elements positioned in the center that contain date-like text */
+div.fixed.top-1\/2.left-1\/2.transform {
+  display: none !important;
+}
+
+/* Also target any div with transform translate that's centered */
+div[class*="top-1/2"][class*="left-1/2"][class*="transform"] {
+  display: none !important;
+}
+
