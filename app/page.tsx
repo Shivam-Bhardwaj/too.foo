@@ -28,9 +28,11 @@ export default function Home() {
       }} />
 
       {/* Hero section */}
-      <section className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4 py-20">
-        {/* WebGL Canvas and Controls */}
-        <ClientWrapper />
+      <section className="relative min-h-screen flex flex-col items-center justify-center px-4 py-20">
+        {/* WebGL Canvas and Controls - Background layer */}
+        <div className="absolute inset-0 z-0">
+          <ClientWrapper />
+        </div>
 
         {/* Fallback image (hidden by default, shown if WebGL fails) */}
         <noscript>
@@ -41,8 +43,8 @@ export default function Home() {
           />
         </noscript>
 
-        {/* Content */}
-        <div className="relative z-10 text-center max-w-4xl mx-auto">
+        {/* Content - Foreground layer (on top) */}
+        <div className="relative z-20 text-center max-w-4xl mx-auto">
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-light mb-6 text-cosmic-cyan/90 clamp-text">
             too.foo — Solar Memory Online
           </h1>

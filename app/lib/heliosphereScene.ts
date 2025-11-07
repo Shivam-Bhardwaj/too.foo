@@ -25,8 +25,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   // The heliosphere nose points into the interstellar wind at ecliptic λ≈255.4°, β≈5.2°
   const apexBasis = basisFromApex(); // X-axis points toward interstellar upwind
 
-  // ===== Starfield (fixed in the interstellar frame) =====
-  // Stars represent the Local Interstellar Cloud and nearby stellar neighborhood
+  // ===== Starfield (galactic background streaming past) =====
+  // Stars represent the Milky Way galaxy streaming past as the heliosphere moves through it
+  // We're viewing from a distance: heliosphere is fixed, stars stream past
   // Distribution based on Gaia catalog statistics for solar neighborhood
   const starMat = new THREE.PointsMaterial({ size: 0.015, transparent: true, opacity: 0.9 });
   const starGeo = new THREE.BufferGeometry();
@@ -90,7 +91,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   const stars = new THREE.Points(starGeo, starMat);
   scene.add(stars);
 
-  // ===== Heliosphere (FIXED, oriented, does NOT move) =====
+  // ===== Heliosphere (FIXED - reference frame) =====
+  // The heliosphere is completely fixed in our view
+  // We're observing it from a distance as it moves through the galaxy
+  // Stars stream past to show our 230 km/s orbital motion around Milky Way center
   const helio = (() => {
     const g = new THREE.SphereGeometry(3.6, 64, 64);
     // Anisotropy: compressed nose toward +X (upwind), elongated tail
@@ -236,12 +240,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   let motionEnabled = true;
   
   // Realistic velocity ratios based on astronomical data
-  // ISM moves at ~26.3 km/s relative to Sun
-  // For visualization: scale so motion is visible but scientifically proportional
+  // We're showing the heliosphere moving through the galaxy
+  // Stars represent the galactic background streaming past us
   const VELOCITY_SCALE = 0.0003; // Scaling factor for screen units/frame
-  const ISM_VELOCITY = 26.3;     // km/s (actual)
-  const SOLAR_DRIFT_SPEED = ISM_VELOCITY * VELOCITY_SCALE;
-  const STAR_DRIFT_SPEED = SOLAR_DRIFT_SPEED * 0.2; // Stars drift slower (parallax layers)
+  const GALACTIC_MOTION = 230;   // km/s - Sun's orbital speed around Milky Way
+  const STAR_STREAM_SPEED = GALACTIC_MOTION * VELOCITY_SCALE; // Stars stream past (galaxy motion)
+  const SOLAR_DRIFT_SPEED = 0.001; // Minimal solar system drift within heliosphere (optional)
 
   // Helpers
   const Z_AXIS = new THREE.Vector3(0, 0, 1);
@@ -266,21 +270,28 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     const alpha = 0.15;
     logicalTime = logicalTime + (normTime - logicalTime) * alpha;
 
-    // Planet placement
+    // Planet placement (planets orbit within heliosphere)
     placePlanets(logicalTime);
 
-    // Sideways drift of the solar system and stars (for parallax effect)
+    // HELIOSPHERE IS FIXED - we're viewing it from a distance as it moves through the galaxy
+    // Stars stream past to show our motion through the Milky Way (230 km/s orbital speed)
     if (motionEnabled) {
-      driftX += SOLAR_DRIFT_SPEED * direction;  // faster solar drift
-      starDriftX += STAR_DRIFT_SPEED * direction;  // subtle star drift
+      // Stars stream past the fixed heliosphere (galaxy background moves)
+      // Negative direction = stars move left as we move right through galaxy
+      starDriftX += STAR_STREAM_SPEED * direction;
+      
+      // Optional: minimal solar system drift within heliosphere (ISM interaction)
+      driftX += SOLAR_DRIFT_SPEED * direction;
     }
     
-    // Solar system moves
+    // Solar system has minimal drift within fixed heliosphere
     sol.position.set(driftX, 0, 0);
     
-    // Stars drift opposite direction for cinematic parallax
-    // (heliosphere stays fixed as the reference frame)
+    // Stars stream past the fixed heliosphere (showing galactic motion)
+    // Stars move opposite to our direction of travel through the galaxy
     stars.position.set(-starDriftX, 0, 0);
+    
+    // Heliosphere stays at origin (0,0,0) - completely fixed
 
     renderer.render(scene, camera);
   }
