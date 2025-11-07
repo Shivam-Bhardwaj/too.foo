@@ -56,3 +56,5 @@ Thumbs.db
 # Large files
 *.node
 
+# Cursor workflow metadata
+.cursor-workflow*.json

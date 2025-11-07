@@ -9,6 +9,7 @@
     "start": "next start",
     "api": "python backend/app.py",
     "generate-stills": "node scripts/generate-stills.js",
+    "test": "vitest run",
     "task": "node scripts/cursor-agent.js",
     "create-task": "node scripts/create-task.js",
     "worktree": "node scripts/worktree.js",
@@ -31,6 +32,7 @@
     "canvas": "^3.2.0",
     "postcss": "^8.4.0",
     "tailwindcss": "^3.3.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vitest": "^4.0.7"
   }
 }
