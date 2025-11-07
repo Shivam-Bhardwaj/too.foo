@@ -13,6 +13,7 @@ interface ControlsProps {
   onDirectionChange: (direction: Direction) => void;
   onMotionChange: (enabled: boolean) => void;
   onPauseChange: (paused: boolean) => void;
+  layout?: 'inline' | 'compact' | 'stacked';
 }
 
 // Speed presets: years per second (logarithmic scale)
@@ -36,6 +37,7 @@ export default function Controls({
   onDirectionChange,
   onMotionChange,
   onPauseChange,
+  layout = 'inline',
 }: ControlsProps) {
   const [year, setYear] = useState(2024.0);
   const [speedIndex, setSpeedIndex] = useState(2); // Start at 1 solar cycle per second (11 years/sec)
@@ -188,7 +190,11 @@ export default function Controls({
     setPaused(newPaused);
     onPauseChange(newPaused);
     setAnnouncement(newPaused ? 'Paused.' : 'Resumed.');
-    heroRef.current?.updateScene(currentYearRef.current, direction, !reduceMotion && !newPaused);
+    try {
+      heroRef.current?.updateScene(currentYearRef.current, direction, !reduceMotion && !newPaused);
+    } catch (error) {
+      console.error('Error updating scene on pause:', error);
+    }
   };
 
   const handleReduceMotionToggle = () => {
@@ -211,16 +217,33 @@ export default function Controls({
 
   const motionDisabled = reduceMotion || paused;
 
+  const isStacked = layout === 'stacked';
+  const isCompact = layout === 'compact';
+  const containerClass = [
+    'flex rounded-2xl bg-black/40 backdrop-blur border border-white/10 shadow-lg pointer-events-auto transition-all duration-300',
+    isStacked ? 'flex-col items-stretch gap-3 px-4 py-3 w-full' : 'items-center gap-3 px-4 py-2',
+    isCompact ? 'flex-wrap justify-center w-full' : 'justify-center',
+  ].join(' ');
+  const sliderWidthClass = isStacked ? 'w-full' : 'w-32';
+  const speedButtonClass = (index: number) =>
+    `px-2 py-1 text-xs text-white border rounded transition-colors ${
+      speedIndex === index
+        ? 'bg-white/20 border-white/40'
+        : 'border-white/20 hover:border-white/40 hover:bg-white/10'
+    } ${isStacked ? 'flex-1 min-w-[4rem]' : ''}`;
+  const actionButtonClass =
+    'px-3 py-1.5 rounded-full text-sm font-medium text-white bg-cosmic-indigo/60 hover:bg-cosmic-indigo/80 border border-white/20 transition-colors';
+
   return (
     <>
       {/* Controls - Header section (one line) */}
       <div 
-        className="flex items-center gap-3 rounded-2xl bg-black/40 backdrop-blur border border-white/10 px-4 py-2 shadow-lg"
+        className={containerClass}
         role="region"
         aria-label="Simulation controls">
         
         {/* Logarithmic Time Slider */}
-        <div className="flex items-center gap-2">
+        <div className={`flex items-center gap-2 ${isStacked ? 'flex-col items-stretch w-full' : ''}`}>
           <label htmlFor="year-slider" className="text-xs text-white/70 whitespace-nowrap">
             Time: {formatLogTime(yearsToSeconds(year))}
           </label>
@@ -237,7 +260,7 @@ export default function Controls({
             disabled={motionDisabled}
             aria-label="Time (logarithmic scale)"
             title="Scrub through time (logarithmic scale)"
-            className="w-32 h-1.5 bg-white/20 rounded-lg appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-white/50"
+            className={`${sliderWidthClass} h-1.5 bg-white/20 rounded-lg appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-white/50`}
             style={{
               background: `linear-gradient(to right, #ffffff 0%, #ffffff ${logSliderValue * 100}%, rgba(255, 255, 255, 0.2) ${logSliderValue * 100}%, rgba(255, 255, 255, 0.2) 100%)`,
             }}
@@ -248,7 +271,7 @@ export default function Controls({
         <div className="h-6 w-px bg-white/20"></div>
 
         {/* Speed Controls */}
-        <div className="flex items-center gap-1">
+        <div className={`flex items-center gap-1 ${isStacked ? 'flex-wrap w-full' : ''}`}>
           {SPEED_PRESETS.map((preset, index) => (
             <button
               key={index}
@@ -256,11 +279,7 @@ export default function Controls({
               disabled={motionDisabled}
               aria-label={`Set speed to ${preset.label}`}
               title={`${preset.value} years per second`}
-              className={`px-2 py-1 text-xs text-white border rounded transition-colors ${
-                speedIndex === index
-                  ? 'bg-white/30 border-white/40'
-                  : 'bg-white/10 border-white/20 hover:bg-white/20'
-              } disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-white/50`}
+              className={`${speedButtonClass(index)} disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-white/50`}
             >
               {preset.label}
             </button>
@@ -271,7 +290,7 @@ export default function Controls({
         <div className="h-6 w-px bg-white/20"></div>
 
         {/* Direction and Control Buttons */}
-        <div className="flex items-center gap-1">
+        <div className={`flex items-center gap-2 ${isStacked ? 'justify-between w-full flex-wrap' : ''}`}>
           <button
             onClick={handleDirectionToggle}
             disabled={motionDisabled}
@@ -297,7 +316,7 @@ export default function Controls({
             disabled={getPrefersReducedMotion()}
             aria-label="Disable background motion"
             title={reduceMotion ? 'Motion off' : 'Disable background motion'}
-            className="px-2 py-1 text-xs text-white bg-white/10 border border-white/20 rounded hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-white/50 transition-colors"
+            className={`${actionButtonClass} disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-white/50 transition-colors`}
           >
             {reduceMotion ? 'Motion off' : 'Reduce'}
           </button>

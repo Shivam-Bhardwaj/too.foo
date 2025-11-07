@@ -2,9 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  color-scheme: dark;
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+}
+
 @layer base {
   body {
     @apply bg-cosmic-indigo text-white antialiased;
+    background-image:
+      radial-gradient(circle at 20% 20%, rgba(153, 230, 255, 0.15), transparent 55%),
+      radial-gradient(circle at 80% 0%, rgba(255, 176, 124, 0.2), transparent 50%),
+      linear-gradient(180deg, rgba(3, 7, 18, 1) 0%, rgba(5, 10, 25, 1) 100%);
+    background-attachment: fixed;
   }
 }
 
@@ -82,4 +95,3 @@ div.fixed.top-1\/2.left-1\/2.transform {
 div[class*="top-1/2"][class*="left-1/2"][class*="transform"] {
   display: none !important;
 }
-

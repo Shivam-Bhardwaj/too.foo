@@ -6,6 +6,7 @@ import { ComponentVisibility } from '../lib/heliosphereScene';
 
 interface LayerControlProps {
   heroRef: React.RefObject<HeroRef>;
+  density?: 'floating' | 'panel';
 }
 
 const LAYER_LABELS: Record<keyof ComponentVisibility, string> = {
@@ -28,11 +29,11 @@ const LAYER_LABELS: Record<keyof ComponentVisibility, string> = {
   constellations: 'Constellations',
 };
 
-export default function LayerControl({ heroRef }: LayerControlProps) {
+export default function LayerControl({ heroRef, density = 'floating' }: LayerControlProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [layers, setLayers] = useState<ComponentVisibility>({
     heliosphere: true,
-    helioglow: true,
+    helioglow: false,
     terminationShock: true,
     bowShock: false,
     solarWind: true,
@@ -66,6 +67,13 @@ export default function LayerControl({ heroRef }: LayerControlProps) {
     heroRef.current?.toggleComponent(key, newValue);
   };
 
+  const triggerClasses = density === 'panel'
+    ? 'w-full justify-between text-base px-5 py-3'
+    : 'px-4 py-2 text-sm';
+  const panelClasses = density === 'panel'
+    ? 'mt-3 w-full bg-black/70 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-2xl max-h-[60vh] overflow-y-auto pointer-events-auto'
+    : 'mt-2 bg-black/80 backdrop-blur-sm border border-white/20 rounded-lg p-3 shadow-lg max-h-96 overflow-y-auto pointer-events-auto';
+
   const layerControlContent = (
     <div className="pointer-events-auto" data-ui="layer-control">
       <button
@@ -77,7 +85,7 @@ export default function LayerControl({ heroRef }: LayerControlProps) {
         onMouseDown={(e) => {
           e.stopPropagation();
         }}
-        className="bg-black/60 backdrop-blur-sm border border-white/20 rounded-lg px-4 py-2 text-white text-sm hover:bg-black/80 transition-colors shadow-lg cursor-pointer"
+        className={`bg-black/60 backdrop-blur-sm border border-white/20 rounded-lg text-white hover:bg-black/80 transition-colors shadow-lg cursor-pointer flex items-center gap-2 ${triggerClasses}`}
         aria-label="Toggle layer controls"
         type="button"
         style={{ pointerEvents: 'auto', zIndex: 101 }}
@@ -87,7 +95,7 @@ export default function LayerControl({ heroRef }: LayerControlProps) {
       
       {isOpen && (
         <div 
-          className="mt-2 bg-black/80 backdrop-blur-sm border border-white/20 rounded-lg p-3 shadow-lg max-h-96 overflow-y-auto pointer-events-auto" 
+          className={panelClasses}
           style={{ pointerEvents: 'auto', zIndex: 102 }}
           onMouseDown={(e) => e.stopPropagation()}
         >

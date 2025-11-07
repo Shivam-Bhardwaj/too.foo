@@ -49,17 +49,47 @@ export type SceneAPI = {
   getVisibility: () => ComponentVisibility;
 };
 
-export function createScene(canvas: HTMLCanvasElement): SceneAPI {
+export function createScene(
+  canvas: HTMLCanvasElement,
+  context?: WebGLRenderingContext | WebGL2RenderingContext
+): SceneAPI {
   // Renderer / Scene / Camera
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  const renderer = new THREE.WebGLRenderer({ canvas, context, antialias: true, powerPreference: "high-performance" });
+  const isBrowser = typeof window !== 'undefined';
+  const prefersMobile = isBrowser && typeof window.matchMedia === 'function'
+    ? window.matchMedia('(max-width: 768px)').matches
+    : false;
+  const computePixelRatio = () => {
+    if (!isBrowser) return 1;
+    const ratio = typeof window.devicePixelRatio === 'number' ? window.devicePixelRatio : 1;
+    const mobile = typeof window.matchMedia === 'function'
+      ? window.matchMedia('(max-width: 768px)').matches
+      : prefersMobile;
+    return Math.min(ratio, mobile ? 1.5 : 2);
+  };
+  renderer.setPixelRatio(computePixelRatio());
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.25;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
   const scene = new THREE.Scene();
   // Deep space black - no atmospheric scattering in interstellar space
-  scene.background = new THREE.Color(0x000000);
+  scene.background = new THREE.Color(0x050916);
+  scene.fog = new THREE.FogExp2(0x030711, 0.00035);
 
-  const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 3000);
+  const BASE_FOV = 55;
+  const camera = new THREE.PerspectiveCamera(BASE_FOV, 1, 0.1, 3000);
   camera.position.set(0, 2.2, 10);
   camera.lookAt(0, 0, 0);
+
+  const ambientLight = new THREE.AmbientLight(0x6fa0ff, 0.55);
+  const rimLight = new THREE.DirectionalLight(0x99e6ff, 0.65);
+  rimLight.position.set(-6, 4, 6);
+  const warmFill = new THREE.PointLight(0xffc89a, 0.35, 50);
+  warmFill.position.set(5, -3, -4);
+  scene.add(ambientLight, rimLight, warmFill);
   
   // Interactive camera controls
   const controls = new OrbitControls(camera, canvas);
@@ -106,9 +136,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   // We're viewing from a distance: heliosphere is fixed, stars stream past
   // Distribution based on Gaia catalog statistics for solar neighborhood
   const starMat = new THREE.PointsMaterial({ 
-    size: 0.018,  // Larger, more visible stars
+    size: 0.02,  // Larger, more visible stars
     transparent: true, 
     opacity: 1.0,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
     sizeAttenuation: true,  // Stars get smaller with distance
     vertexColors: true
   });
@@ -211,14 +243,16 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     
     // Realistic heliosphere material
     const m = new THREE.MeshPhysicalMaterial({
-      color: new THREE.Color(0x1a2a4e),
-      emissive: new THREE.Color(0x0a1a2a),
-      transmission: 0.85,
-      thickness: 0.4,
-      roughness: 0.95,
-      metalness: 0.0,
+      color: new THREE.Color(0x274bff),
+      emissive: new THREE.Color(0x0b1b3f),
+      transmission: 0.92,
+      thickness: 0.35,
+      roughness: 0.75,
+      metalness: 0.05,
+      clearcoat: 0.6,
+      clearcoatRoughness: 0.3,
       transparent: true,
-      opacity: 0.25,
+      opacity: 0.32,
       side: THREE.DoubleSide
     });
     
@@ -231,15 +265,18 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     const glowGeometry = hpGeometry.clone();
     glowGeometry.scale(1.1, 1.1, 1.1);
     const glowMaterial = new THREE.MeshBasicMaterial({
-      color: new THREE.Color(0x1a2a4a),
+      color: new THREE.Color(0x3dc9ff),
       transparent: true,
-      opacity: 0.03,
-      side: THREE.DoubleSide
+      opacity: 0.06,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
     });
     const glow = new THREE.Mesh(glowGeometry, glowMaterial);
     glow.setRotationFromMatrix(apexBasis);
     glow.name = 'helioglow';
     scene.add(glow);
+    glow.visible = false;
     
     return { mesh, glow, geometry: hpGeometry, heliosphereModel };
   })();
@@ -1022,7 +1059,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   // ==== Component visibility state (astronomer controls) ====
   const visibility: ComponentVisibility = {
     heliosphere: true,
-    helioglow: true,
+    helioglow: false,
     terminationShock: true,
     bowShock: false,
     solarWind: true,
@@ -1541,9 +1578,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   }
 
   function resize(w: number, h: number) {
-    renderer.setSize(w, h, false);
-    camera.aspect = w / h;
+    const safeHeight = Math.max(h, 1);
+    const aspect = w / safeHeight;
+    const portraitBoost = aspect < 1 ? 1 - aspect : 0;
+    const targetFov = THREE.MathUtils.clamp(BASE_FOV + portraitBoost * 20, BASE_FOV, 75);
+    camera.fov = targetFov;
+    camera.aspect = aspect;
     camera.updateProjectionMatrix();
+    renderer.setPixelRatio(computePixelRatio());
+    renderer.setSize(w, h, false);
     labelManager.resize(w, h);
   }
 
