@@ -188,7 +188,11 @@ export default function Controls({
     setPaused(newPaused);
     onPauseChange(newPaused);
     setAnnouncement(newPaused ? 'Paused.' : 'Resumed.');
-    heroRef.current?.updateScene(currentYearRef.current, direction, !reduceMotion && !newPaused);
+    try {
+      heroRef.current?.updateScene(currentYearRef.current, direction, !reduceMotion && !newPaused);
+    } catch (error) {
+      console.error('Error updating scene on pause:', error);
+    }
   };
 
   const handleReduceMotionToggle = () => {

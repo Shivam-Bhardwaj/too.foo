@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect, type CSSProperties } from 'react';
 import Hero, { HeroRef } from './Hero';
 import Controls from './Controls';
 import LayerControl from './LayerControl';
@@ -8,6 +8,25 @@ import LayerControl from './LayerControl';
 export default function ClientWrapper() {
   const heroRef = useRef<HeroRef>(null);
   const [currentYear, setCurrentYear] = useState(2024.0);
+  const [viewport, setViewport] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    const updateViewport = () => {
+      setViewport({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    };
+
+    updateViewport();
+    window.addEventListener('resize', updateViewport);
+    window.addEventListener('orientationchange', updateViewport);
+
+    return () => {
+      window.removeEventListener('resize', updateViewport);
+      window.removeEventListener('orientationchange', updateViewport);
+    };
+  }, []);
 
   const handleTimeChange = useCallback((time: number) => {
     setCurrentYear(time);
@@ -24,6 +43,26 @@ export default function ClientWrapper() {
   const handlePauseChange = (paused: boolean) => {
     // Pause updates are handled internally by Controls
   };
+
+  const isMobileViewport = viewport.width > 0 ? viewport.width <= 768 : false;
+  const heroWrapperClassName = isMobileViewport
+    ? 'fixed inset-0 z-0 pointer-events-none flex items-center justify-center px-2'
+    : 'fixed inset-0 z-0 pointer-events-none';
+  const heroWrapperStyle: CSSProperties | undefined = isMobileViewport
+    ? {
+        paddingTop: 'max(env(safe-area-inset-top), 0px)',
+        paddingBottom: 'max(env(safe-area-inset-bottom), 0px)',
+      }
+    : undefined;
+  const heroViewportStyle: CSSProperties | undefined =
+    isMobileViewport && viewport.height > 0
+      ? {
+          width: '100%',
+          maxWidth: `${viewport.width}px`,
+          height: `${Math.min(viewport.height, viewport.width * (16 / 9))}px`,
+          maxHeight: `${viewport.height}px`,
+        }
+      : undefined;
 
   // Format date as YYYY-MM-DD
   const formatDate = (year: number): string => {
@@ -45,8 +84,10 @@ export default function ClientWrapper() {
   return (
     <>
       {/* Canvas - Full screen background */}
-      <div className="fixed inset-0 z-0 pointer-events-none">
-        <Hero ref={heroRef} />
+      <div className={heroWrapperClassName} style={heroWrapperStyle}>
+        <div className="relative w-full h-full pointer-events-none" style={heroViewportStyle}>
+          <Hero ref={heroRef} />
+        </div>
       </div>
       
       {/* Header Section - Controls and Menu (one line) */}
@@ -74,4 +115,3 @@ export default function ClientWrapper() {
     </>
   );
 }
-

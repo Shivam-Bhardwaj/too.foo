@@ -49,15 +49,25 @@ export type SceneAPI = {
   getVisibility: () => ComponentVisibility;
 };
 
-export function createScene(canvas: HTMLCanvasElement): SceneAPI {
+export function createScene(
+  canvas: HTMLCanvasElement,
+  context?: WebGLRenderingContext | WebGL2RenderingContext
+): SceneAPI {
   // Renderer / Scene / Camera
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  const renderer = new THREE.WebGLRenderer({ canvas, context, antialias: true, powerPreference: "high-performance" });
+  const isBrowser = typeof window !== 'undefined';
+  const deviceRatio = isBrowser && typeof window.devicePixelRatio === 'number' ? window.devicePixelRatio : 1;
+  const prefersMobile = isBrowser && typeof window.matchMedia === 'function'
+    ? window.matchMedia('(max-width: 768px)').matches
+    : false;
+  const maxPixelRatio = prefersMobile ? 1.5 : 2;
+  renderer.setPixelRatio(Math.min(deviceRatio, maxPixelRatio));
   const scene = new THREE.Scene();
   // Deep space black - no atmospheric scattering in interstellar space
   scene.background = new THREE.Color(0x000000);
 
-  const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 3000);
+  const BASE_FOV = 55;
+  const camera = new THREE.PerspectiveCamera(BASE_FOV, 1, 0.1, 3000);
   camera.position.set(0, 2.2, 10);
   camera.lookAt(0, 0, 0);
   
@@ -240,7 +250,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     glow.setRotationFromMatrix(apexBasis);
     glow.name = 'helioglow';
     scene.add(glow);
-    
+    glow.visible = false; // Disabled by default to avoid overly dark UV layer on mobile
+
     return { mesh, glow, geometry: hpGeometry, heliosphereModel };
   })();
   
@@ -1022,7 +1033,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   // ==== Component visibility state (astronomer controls) ====
   const visibility: ComponentVisibility = {
     heliosphere: true,
-    helioglow: true,
+    helioglow: false,
     terminationShock: true,
     bowShock: false,
     solarWind: true,
@@ -1542,7 +1553,16 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
 
   function resize(w: number, h: number) {
     renderer.setSize(w, h, false);
-    camera.aspect = w / h;
+    const safeHeight = Math.max(h, 1);
+    const aspect = w / safeHeight;
+    camera.aspect = aspect;
+    const portraitBoost = aspect < 1 ? 1 - aspect : 0;
+    const targetFov = portraitBoost > 0
+      ? THREE.MathUtils.clamp(BASE_FOV + portraitBoost * 20, BASE_FOV, BASE_FOV + 25)
+      : BASE_FOV;
+    if (camera.fov !== targetFov) {
+      camera.fov = targetFov;
+    }
     camera.updateProjectionMatrix();
     labelManager.resize(w, h);
   }

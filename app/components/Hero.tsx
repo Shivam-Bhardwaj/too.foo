@@ -9,6 +9,17 @@ export type HeroRef = {
   getVisibility: () => ComponentVisibility;
 };
 
+type WebGLContextWithPerf = WebGLContextAttributes & { desynchronized?: boolean };
+
+const CONTEXT_ATTRIBUTES: WebGLContextWithPerf = {
+  alpha: false,
+  antialias: true,
+  premultipliedAlpha: false,
+  preserveDrawingBuffer: false,
+  powerPreference: 'high-performance',
+  desynchronized: true,
+};
+
 const Hero = forwardRef<HeroRef>((props, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneRef = useRef<SceneAPI | null>(null);
@@ -32,7 +43,7 @@ const Hero = forwardRef<HeroRef>((props, ref) => {
       }
       return {
         heliosphere: true,
-        helioglow: true,
+        helioglow: false,
         terminationShock: true,
         bowShock: false,
         solarWind: true,
@@ -56,7 +67,8 @@ const Hero = forwardRef<HeroRef>((props, ref) => {
     if (!canvasRef.current) return;
 
     // Check WebGL support
-    const gl = canvasRef.current.getContext('webgl2') || canvasRef.current.getContext('webgl');
+    const gl = (canvasRef.current.getContext('webgl2', CONTEXT_ATTRIBUTES) ||
+      canvasRef.current.getContext('webgl', CONTEXT_ATTRIBUTES)) as (WebGLRenderingContext | WebGL2RenderingContext | null);
     if (!gl) {
       setWebglSupported(false);
       setInitFailed(true);
@@ -64,7 +76,7 @@ const Hero = forwardRef<HeroRef>((props, ref) => {
     }
 
     try {
-      const scene = createScene(canvasRef.current);
+      const scene = createScene(canvasRef.current, gl);
       sceneRef.current = scene;
 
       const handleResize = () => {
@@ -107,7 +119,14 @@ const Hero = forwardRef<HeroRef>((props, ref) => {
     <canvas
       ref={canvasRef}
       className="absolute inset-0 w-full h-full pointer-events-auto"
-      style={{ pointerEvents: 'auto' }}
+      style={{
+        pointerEvents: 'auto',
+        touchAction: 'none',
+        WebkitTapHighlightColor: 'transparent',
+        WebkitTransform: 'translateZ(0)',
+        transform: 'translateZ(0)',
+        willChange: 'transform',
+      }}
       aria-hidden="true"
     />
   );
@@ -116,4 +135,3 @@ const Hero = forwardRef<HeroRef>((props, ref) => {
 Hero.displayName = 'Hero';
 
 export default Hero;
-
