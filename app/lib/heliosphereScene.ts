@@ -165,19 +165,21 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   });
   scene.add(famousStarsGroup);
 
-  // ===== Heliosphere (FIXED - comet-like teardrop shape) =====
-  // The heliosphere is completely fixed in our view
-  // We're observing it from a distance as it moves through the galaxy
-  // Stars stream past to show our 230 km/s orbital motion around Milky Way center
+  // ===== Heliosphere (DYNAMIC - comet-like teardrop shape that changes with solar wind) =====
+  // The heliosphere shape changes dynamically based on solar wind pressure
+  // Solar wind variations cause the heliosphere to expand and contract
   // Shape: Compressed nose (ram pressure) + elongated tail (flow stretching)
   const helio = (() => {
-    // Create teardrop/comet shape geometry
-    const createTeardropGeometry = () => {
+    // Create teardrop/comet shape geometry with dynamic parameters
+    const createTeardropGeometry = (windPressure: number = 1.0) => {
       const segments = 64;
       const rings = 48;
-      const radius = 3.6;
-      const noseCompression = 0.65;  // Nose compressed by ram pressure
-      const tailStretch = 2.2;        // Tail elongated by flow
+      // Dynamic radius based on solar wind pressure (higher pressure = larger heliosphere)
+      const baseRadius = 3.6;
+      const radius = baseRadius * (0.85 + windPressure * 0.3); // Varies between 85% and 115% of base
+      // Dynamic compression/stretch based on wind pressure
+      const noseCompression = 0.65 + (1.0 - windPressure) * 0.15;  // Higher pressure = less compression
+      const tailStretch = 2.2 + (windPressure - 1.0) * 0.4;        // Higher pressure = more tail stretch
       
       const geometry = new THREE.BufferGeometry();
       const vertices: number[] = [];
@@ -235,18 +237,18 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
       return geometry;
     };
     
-    const g = createTeardropGeometry();
+    const g = createTeardropGeometry(1.0); // Initial geometry
     
-    // Realistic heliosphere material - brighter for visibility
+    // Realistic heliosphere material - reduced brightness for more realistic appearance
     const m = new THREE.MeshPhysicalMaterial({
-      color: new THREE.Color(0x2a4a6e),  // Brighter blue-grey
-      emissive: new THREE.Color(0x1a2a4a), // Brighter helioglow
-      transmission: 0.75,  // Less transparent for more presence
+      color: new THREE.Color(0x1a2a4e),  // Darker blue-grey
+      emissive: new THREE.Color(0x0a1a2a), // Much dimmer helioglow
+      transmission: 0.85,  // More transparent
       thickness: 0.4,
       roughness: 0.95,
       metalness: 0.0,
       transparent: true,
-      opacity: 0.5,  // Much more visible
+      opacity: 0.25,  // Much more subtle
       side: THREE.DoubleSide
     });
     
@@ -259,9 +261,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     const glowGeometry = g.clone();
     glowGeometry.scale(1.1, 1.1, 1.1); // Slightly larger
     const glowMaterial = new THREE.MeshBasicMaterial({
-      color: new THREE.Color(0x2a4a6a),
+      color: new THREE.Color(0x1a2a4a),
       transparent: true,
-      opacity: 0.08,  // Very subtle glow
+      opacity: 0.03,  // Much more subtle glow
       side: THREE.DoubleSide
     });
     const glow = new THREE.Mesh(glowGeometry, glowMaterial);
@@ -269,7 +271,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     glow.name = 'helioglow';
     scene.add(glow);
     
-    return { mesh, glow };
+    return { mesh, glow, geometry: g, createTeardropGeometry };
   })();
   
   // ===== Interstellar Wind Particles =====
@@ -778,7 +780,29 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
 
     // Animate solar wind streams with accurate physics
     if (motionEnabled) {
-      let streamTime = (currentYear % 1) * 0.1; // Slow animation based on year
+      // Much faster animation for realistic solar wind flow
+      // Solar wind flows at ~350 km/s, so we need faster animation
+      const timeScale = 0.05; // Animation speed multiplier
+      let streamTime = (currentYear % 1) * timeScale * 10; // Faster flow
+      
+      // Calculate solar wind pressure variation (11-year solar cycle + shorter variations)
+      // Solar wind pressure varies with solar activity
+      const solarCyclePhase = (currentYear % 11) / 11; // 11-year solar cycle
+      const shortTermVariation = Math.sin(currentYear * 0.5) * 0.3; // Shorter term variations
+      const windPressure = 0.8 + solarCyclePhase * 0.4 + shortTermVariation; // Varies between 0.8 and 1.2
+      
+      // Update heliosphere shape based on solar wind pressure
+      const newHelioGeometry = helio.createTeardropGeometry(windPressure);
+      helio.mesh.geometry.dispose();
+      helio.mesh.geometry = newHelioGeometry;
+      helio.glow.geometry.dispose();
+      const newGlowGeometry = newHelioGeometry.clone();
+      newGlowGeometry.scale(1.1, 1.1, 1.1);
+      helio.glow.geometry = newGlowGeometry;
+      
+      // Update heliosphere material opacity slightly based on pressure
+      const helioMaterial = helio.mesh.material as THREE.MeshPhysicalMaterial;
+      helioMaterial.opacity = 0.2 + windPressure * 0.1; // Slightly brighter with higher pressure
       
       solarWindStreams.forEach((stream) => {
         // Update stream points with accurate physics
@@ -790,26 +814,42 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
           const t = j / segments;
           const distance = t * maxDist;
           
-          // Add time-based flow offset
-          const flowOffset = streamTime * 0.3;
+          // Add time-based flow offset - much faster for realistic solar wind speed
+          const flowOffset = streamTime * 2.0; // Faster flow animation
           const effectiveDist = distance + flowOffset;
+          
+          // Add dynamic pressure variation to stream behavior
+          const pressureMultiplier = 0.9 + windPressure * 0.2; // Affects stream density/visibility
           
           // Start from sun surface
           const basePos = stream.direction.clone().multiplyScalar(0.5 + effectiveDist);
           
           // Accurate physics: Different behavior in different regions
-          if (effectiveDist < stream.terminationShockDist) {
+          // Apply pressure multiplier to distances (higher pressure = larger heliosphere)
+          const pressureAdjustedTerminationDist = stream.terminationShockDist * pressureMultiplier;
+          const pressureAdjustedHeliopauseDist = stream.heliopauseDist * pressureMultiplier;
+          
+          if (effectiveDist < pressureAdjustedTerminationDist) {
             // Inner heliosphere: supersonic, straight radial flow
             const velocity = solarWindVelocity(effectiveDist / 0.03) / HELIOSPHERIC_VELOCITIES.SOLAR_WIND_OUTER;
             basePos.multiplyScalar(1.0 + (1.0 - velocity) * 0.1);
-          } else if (effectiveDist < stream.heliopauseDist) {
+            
+            // Add subtle wave-like motion to show flow
+            const wavePhase = streamTime * 3.0 + stream.age * Math.PI * 2;
+            const waveAmplitude = Math.sin(wavePhase) * 0.02;
+            const waveDir = new THREE.Vector3().crossVectors(stream.direction, noseDirection).normalize();
+            if (waveDir.length() > 0.1) {
+              basePos.add(waveDir.multiplyScalar(waveAmplitude));
+            }
+          } else if (effectiveDist < pressureAdjustedHeliopauseDist) {
             // Heliosheath: compressed, turbulent, subsonic
-            const excessDist = effectiveDist - stream.terminationShockDist;
-            const sheathWidth = stream.heliopauseDist - stream.terminationShockDist;
+            const excessDist = effectiveDist - pressureAdjustedTerminationDist;
+            const sheathWidth = pressureAdjustedHeliopauseDist - pressureAdjustedTerminationDist;
             const compression = 1.0 + (excessDist / sheathWidth) * 0.3;
             
-            // Turbulent deflection in heliosheath
-            const turbulence = Math.sin(excessDist * 5 + stream.age * Math.PI * 2) * 0.05 * (excessDist / sheathWidth);
+            // More dynamic turbulent deflection in heliosheath
+            const turbulencePhase = excessDist * 8.0 + streamTime * 5.0 + stream.age * Math.PI * 2;
+            const turbulence = Math.sin(turbulencePhase) * 0.08 * (excessDist / sheathWidth) * windPressure;
             const perp = new THREE.Vector3().crossVectors(stream.direction, noseDirection).normalize();
             if (perp.length() > 0.1) {
               basePos.add(perp.multiplyScalar(turbulence));
@@ -818,7 +858,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
             basePos.multiplyScalar(compression);
           } else {
             // Beyond heliopause: curve due to ISM pressure and flow
-            const excessDist = effectiveDist - stream.heliopauseDist;
+            const excessDist = effectiveDist - pressureAdjustedHeliopauseDist;
             const curveAmount = Math.min(excessDist * 0.25, 2.0);
             
             // ISM flows from +X, deflects solar wind
@@ -831,9 +871,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
             }
             const perp2 = new THREE.Vector3().crossVectors(stream.direction, perp1).normalize();
             
-            // Curved deflection with exponential decay
+            // Curved deflection with exponential decay and dynamic motion
             const deflectionStrength = curveAmount * Math.exp(-excessDist * 0.4);
-            const phase = excessDist * 2.0 + stream.age * Math.PI * 2;
+            const phase = excessDist * 2.0 + streamTime * 2.0 + stream.age * Math.PI * 2;
             const deflection = perp1.clone().multiplyScalar(
               Math.sin(phase) * deflectionStrength
             ).add(
@@ -852,20 +892,22 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
         stream.line.geometry.setFromPoints(newPoints);
         stream.line.geometry.attributes.position.needsUpdate = true;
         
-        // Update opacity based on density
+        // Update opacity based on density and wind pressure
         const density = solarWindDensity(newPoints[newPoints.length - 1].length() / 0.03);
-        const opacity = Math.min(0.7, Math.max(0.2, density / 10));
+        const baseOpacity = Math.min(0.7, Math.max(0.2, density / 10));
+        const opacity = baseOpacity * (0.7 + windPressure * 0.3); // Brighter with higher pressure
         (stream.line.material as THREE.LineBasicMaterial).opacity = opacity;
       });
       
-      // Animate interstellar wind particles
+      // Animate interstellar wind particles - faster flow
       const ismWindPos = ismWindGeo.attributes.position.array as Float32Array;
+      const ismSpeedMultiplier = 1.0 + windPressure * 0.2; // ISM flow affected by solar wind pressure
       for (let i = 0; i < ismWindCount; i++) {
         const idx = i * 3;
-        // Update position
-        ismWindPos[idx + 0] += ismWindVelocities[idx + 0];
-        ismWindPos[idx + 1] += ismWindVelocities[idx + 1];
-        ismWindPos[idx + 2] += ismWindVelocities[idx + 2];
+        // Update position with dynamic speed
+        ismWindPos[idx + 0] += ismWindVelocities[idx + 0] * ismSpeedMultiplier;
+        ismWindPos[idx + 1] += ismWindVelocities[idx + 1] * ismSpeedMultiplier;
+        ismWindPos[idx + 2] += ismWindVelocities[idx + 2] * ismSpeedMultiplier;
         
         // Reset particles that have passed through heliosphere
         if (ismWindPos[idx + 0] < -5) {
