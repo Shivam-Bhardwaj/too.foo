@@ -169,26 +169,105 @@ export async function createResearchGradeScene(canvas: HTMLCanvasElement): Promi
   // Get heliosphere model
   const heliosphereModel = dataService.getHeliosphereModel();
   
-  // Termination shock
+  // Termination shock - using smooth volumetric glow with multiple gradient layers
   const terminationShockGeometry = heliosphereModel.generateParametricSurface(
     'terminationShock',
     JulianDate.fromDate(currentDate),
-    48
+    64 // Higher resolution for smoother appearance
   );
   terminationShockGeometry.scale(AU_SCALE, AU_SCALE, AU_SCALE);
   
-  const terminationShockMaterial = new THREE.MeshBasicMaterial({
+  // Create multiple gradient layers for smooth volumetric blending
+  // Layer 1: Core glow (innermost, strongest)
+  const tsCoreMaterial = new THREE.MeshPhysicalMaterial({
     color: 0xff8844,
+    emissive: 0xff6600,
+    emissiveIntensity: 1.2,
     transparent: true,
-    opacity: 0.2,
-    wireframe: true,
-    side: THREE.DoubleSide
+    opacity: 0.12,
+    side: THREE.DoubleSide,
+    roughness: 1.0,
+    metalness: 0.0,
+    transmission: 0.98,
+    thickness: 0.15,
+    ior: 1.05
   });
+  const terminationShockCore = new THREE.Mesh(terminationShockGeometry, tsCoreMaterial);
+  terminationShockCore.setRotationFromMatrix(apexBasis);
+  terminationShockCore.name = 'terminationShockCore';
+  heliosphereGroup.add(terminationShockCore);
   
-  const terminationShockMesh = new THREE.Mesh(terminationShockGeometry, terminationShockMaterial);
-  terminationShockMesh.setRotationFromMatrix(apexBasis);
-  terminationShockMesh.name = 'terminationShock';
-  heliosphereGroup.add(terminationShockMesh);
+  // Layer 2: Inner glow (smooth transition)
+  const tsInnerGeometry = terminationShockGeometry.clone();
+  tsInnerGeometry.scale(1.02, 1.02, 1.02);
+  const tsInnerMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0xff8844,
+    emissive: 0xff6600,
+    emissiveIntensity: 0.9,
+    transparent: true,
+    opacity: 0.10,
+    side: THREE.DoubleSide,
+    roughness: 1.0,
+    metalness: 0.0,
+    transmission: 0.97,
+    thickness: 0.18,
+    ior: 1.05
+  });
+  const terminationShockInner = new THREE.Mesh(tsInnerGeometry, tsInnerMaterial);
+  terminationShockInner.setRotationFromMatrix(apexBasis);
+  terminationShockInner.name = 'terminationShockInner';
+  heliosphereGroup.add(terminationShockInner);
+  
+  // Layer 3: Mid glow (smooth transition)
+  const tsMidGeometry = terminationShockGeometry.clone();
+  tsMidGeometry.scale(1.04, 1.04, 1.04);
+  const tsMidMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0xff8844,
+    emissive: 0xff6600,
+    emissiveIntensity: 0.6,
+    transparent: true,
+    opacity: 0.08,
+    side: THREE.DoubleSide,
+    roughness: 1.0,
+    metalness: 0.0,
+    transmission: 0.96,
+    thickness: 0.20,
+    ior: 1.05
+  });
+  const terminationShockMid = new THREE.Mesh(tsMidGeometry, tsMidMaterial);
+  terminationShockMid.setRotationFromMatrix(apexBasis);
+  terminationShockMid.name = 'terminationShockMid';
+  heliosphereGroup.add(terminationShockMid);
+  
+  // Layer 4: Outer glow (smooth fade-out)
+  const tsOuterGeometry = terminationShockGeometry.clone();
+  tsOuterGeometry.scale(1.06, 1.06, 1.06);
+  const tsOuterMaterial = new THREE.MeshBasicMaterial({
+    color: 0xff6600,
+    transparent: true,
+    opacity: 0.06,
+    side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending // Smooth additive blending
+  });
+  const terminationShockOuter = new THREE.Mesh(tsOuterGeometry, tsOuterMaterial);
+  terminationShockOuter.setRotationFromMatrix(apexBasis);
+  terminationShockOuter.name = 'terminationShockOuter';
+  heliosphereGroup.add(terminationShockOuter);
+  
+  // Layer 5: Faint halo (very subtle outer edge)
+  const tsHaloGeometry = terminationShockGeometry.clone();
+  tsHaloGeometry.scale(1.08, 1.08, 1.08);
+  const tsHaloMaterial = new THREE.MeshBasicMaterial({
+    color: 0xff6600,
+    transparent: true,
+    opacity: 0.03,
+    side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending
+  });
+  const terminationShockHalo = new THREE.Mesh(tsHaloGeometry, tsHaloMaterial);
+  terminationShockHalo.setRotationFromMatrix(apexBasis);
+  terminationShockHalo.name = 'terminationShockHalo';
+  heliosphereGroup.add(terminationShockHalo);
   
   // Heliopause
   const heliopauseGeometry = heliosphereModel.generateParametricSurface(

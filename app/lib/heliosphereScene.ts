@@ -72,6 +72,22 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   controls.target.set(0, 0, 0); // Look at heliosphere center
   controls.update();
   
+  // Prevent OrbitControls from capturing clicks on UI elements
+  // Check if click target is a UI element before allowing controls to handle it
+  const originalOnPointerDown = controls.addEventListener.bind(controls);
+  canvas.addEventListener('pointerdown', (e: PointerEvent) => {
+    const target = e.target as HTMLElement;
+    // Check if clicking on a UI element (button, input, or element with data-ui attribute)
+    if (target.closest('button') || 
+        target.closest('input') || 
+        target.closest('[data-ui]') ||
+        target.closest('.z-\\[9999\\]') ||
+        window.getComputedStyle(target).zIndex === '9999') {
+      e.stopPropagation();
+      return;
+    }
+  }, true); // Use capture phase to intercept before OrbitControls
+  
   // Camera panning state (optional auto-panning)
   let cameraTime = 0;
   const cameraRadius = 12;
@@ -441,27 +457,99 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   
   // ===== Termination Shock Visualization =====
   // Show the boundary where solar wind slows from supersonic to subsonic
+  // Using smooth volumetric glow with multiple gradient layers for natural blending
   const terminationShockGroup = new THREE.Group();
   terminationShockGroup.name = 'terminationShock';
   scene.add(terminationShockGroup);
   
+  // Store references for time-based updates
+  let tsCoreMesh: THREE.Mesh;
+  let tsInnerMesh: THREE.Mesh;
+  let tsMidMesh: THREE.Mesh;
+  let tsOuterMesh: THREE.Mesh;
+  let tsHaloMesh: THREE.Mesh;
+  let tsBaseGeometry: THREE.BufferGeometry;
+  let lastTSUpdateYear = -Infinity;
+  let animationTime = 0; // Continuous animation time for pulsing effects
+  
   // Create asymmetric termination shock using MHD model
-  const tsGeometry = heliosphereModel.generateParametricSurface(
-    'terminationShock',
-    currentJD,
-    48
-  );
-  tsGeometry.scale(0.03, 0.03, 0.03); // Scale AU to scene units
-  const tsMaterial = new THREE.MeshBasicMaterial({
-    color: 0xffaa44,
-    transparent: true,
-    opacity: 0.15,
-    wireframe: true,
-    side: THREE.DoubleSide
-  });
-  const terminationShock = new THREE.Mesh(tsGeometry, tsMaterial);
-  terminationShock.setRotationFromMatrix(apexBasis);
-  terminationShockGroup.add(terminationShock);
+  const createTerminationShock = (year: number) => {
+    // Clear existing meshes
+    terminationShockGroup.clear();
+    
+    const jd = JulianDate.fromDate(new Date(Math.floor(year), 0, 1));
+    tsBaseGeometry = heliosphereModel.generateParametricSurface(
+      'terminationShock',
+      jd,
+      128 // MUCH higher resolution for smooth, blurry edges (was 64)
+    );
+    tsBaseGeometry.scale(0.03, 0.03, 0.03); // Scale AU to scene units
+    
+    // Calculate solar cycle phase (0-1 over 11 years)
+    const solarCyclePhase = (year % 11) / 11;
+    const solarActivity = 0.7 + Math.sin(solarCyclePhase * Math.PI * 2) * 0.3; // 0.4 to 1.0
+    
+    // MUCH LOWER opacity for faint aurora-like glow - can see through it
+    // Base opacity is extremely low (0.002 to 0.006) - like a faint aurora
+    const baseOpacity = 0.002 + solarActivity * 0.004; // 0.002 to 0.006 (0.2% to 0.6%)
+    
+    // Create MANY thin layers with VERY SMALL spacing for smooth, blurry aurora-like effect
+    // Aurora effect: many overlapping layers with very low opacity and tight spacing
+    const layerCount = 12; // More layers = smoother blending
+    // Much tighter spacing between layers for smoother transitions
+    const layerScales = [1.0, 1.008, 1.016, 1.024, 1.032, 1.04, 1.048, 1.056, 1.064, 1.072, 1.08, 1.088];
+    // Smooth opacity falloff - no sharp transitions
+    const layerOpacities = [
+      baseOpacity * 1.0,   // Core
+      baseOpacity * 0.95, 
+      baseOpacity * 0.85,
+      baseOpacity * 0.75,
+      baseOpacity * 0.65,
+      baseOpacity * 0.55,
+      baseOpacity * 0.45,
+      baseOpacity * 0.35,
+      baseOpacity * 0.25,
+      baseOpacity * 0.18,
+      baseOpacity * 0.12,
+      baseOpacity * 0.08  // Outer edge
+    ];
+    
+    for (let i = 0; i < layerCount; i++) {
+      const layerGeometry = i === 0 ? tsBaseGeometry : tsBaseGeometry.clone();
+      if (i > 0) {
+        layerGeometry.scale(layerScales[i], layerScales[i], layerScales[i]);
+      }
+      
+      // Use MeshBasicMaterial with additive blending for aurora-like glow
+      const layerMaterial = new THREE.MeshBasicMaterial({
+        color: 0xff8844,
+        transparent: true,
+        opacity: layerOpacities[i],
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending, // Aurora-like additive glow
+        depthWrite: false, // Important for proper blending
+        fog: false // Don't let fog affect the glow
+      });
+      
+      const layerMesh = new THREE.Mesh(layerGeometry, layerMaterial);
+      layerMesh.setRotationFromMatrix(apexBasis);
+      layerMesh.renderOrder = -1; // Render before other objects
+      terminationShockGroup.add(layerMesh);
+      
+      // Store references for first few layers
+      if (i === 0) tsCoreMesh = layerMesh;
+      if (i === 1) tsInnerMesh = layerMesh;
+      if (i === 2) tsMidMesh = layerMesh;
+      if (i === 3) tsOuterMesh = layerMesh;
+      if (i === 4) tsHaloMesh = layerMesh;
+    }
+    
+    lastTSUpdateYear = year; // Store exact year, not just integer
+  };
+  
+  // Initialize termination shock (use current year from date)
+  const initialYear = new Date().getFullYear();
+  createTerminationShock(initialYear);
   
   // ===== Bow Shock Visualization (Optional/Controversial) =====
   const bowShockGroup = new THREE.Group();
@@ -1118,6 +1206,68 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     // Update label manager
     labelManager.update(camera);
     labelManager.updateVisibility(camera, 0.5, 50);
+
+    // Continuous animation time (increments every frame for smooth pulsing)
+    animationTime += 0.016; // ~60fps, increment by frame time
+    
+    // Update termination shock geometry more frequently (every 0.1 years for visible changes)
+    // This creates visible fluctuations based on the 11-year solar cycle
+    const updateThreshold = 0.1; // Update every 0.1 years
+    if (Math.abs(currentYear - lastTSUpdateYear) >= updateThreshold) {
+      createTerminationShock(currentYear);
+    }
+    
+    // Update material properties EVERY FRAME for continuous animation
+    // Keep opacity VERY LOW for aurora-like faint glow
+    if (tsCoreMesh && tsCoreMesh.material) {
+      // Solar cycle phase (11-year cycle)
+      const solarCyclePhase = (currentYear % 11) / 11;
+      const solarActivity = 0.7 + Math.sin(solarCyclePhase * Math.PI * 2) * 0.3;
+      
+      // Add continuous pulsing animation (independent of year, happens every frame)
+      const pulsePhase = animationTime * 0.5; // Slow pulse
+      const pulse = 1.0 + Math.sin(pulsePhase) * 0.2; // ±20% variation for visibility
+      
+      // Add faster sub-cycle variations
+      const fastPulse = Math.sin(animationTime * 2.0) * 0.15; // Faster variation
+      
+      // VERY LOW base opacity - aurora-like faint glow (0.002 to 0.006)
+      const baseOpacity = (0.002 + solarActivity * 0.004) * pulse;
+      
+      // Update all layers in the group with smooth opacity gradients
+      terminationShockGroup.children.forEach((child, index) => {
+        if (child instanceof THREE.Mesh && child.material) {
+          const mat = child.material as THREE.MeshBasicMaterial;
+          // Smooth opacity falloff - no sharp jumps
+          const smoothOpacities = [
+            baseOpacity * 1.0,   // Core
+            baseOpacity * 0.95, 
+            baseOpacity * 0.85,
+            baseOpacity * 0.75,
+            baseOpacity * 0.65,
+            baseOpacity * 0.55,
+            baseOpacity * 0.45,
+            baseOpacity * 0.35,
+            baseOpacity * 0.25,
+            baseOpacity * 0.18,
+            baseOpacity * 0.12,
+            baseOpacity * 0.08  // Outer edge
+          ];
+          if (index < smoothOpacities.length) {
+            mat.opacity = smoothOpacities[index] * (1.0 + fastPulse);
+          }
+        }
+      });
+      
+      // Subtle scale pulsing for breathing effect
+      const scalePulse = 1.0 + Math.sin(pulsePhase * 0.7) * 0.01; // ±1% scale variation (subtle)
+      const layerScales = [1.0, 1.008, 1.016, 1.024, 1.032, 1.04, 1.048, 1.056, 1.064, 1.072, 1.08, 1.088];
+      terminationShockGroup.children.forEach((child, index) => {
+        if (child instanceof THREE.Mesh && index < layerScales.length) {
+          child.scale.set(scalePulse * layerScales[index], scalePulse * layerScales[index], scalePulse * layerScales[index]);
+        }
+      });
+    }
 
     // Animate solar wind streams with accurate physics
     if (motionEnabled) {

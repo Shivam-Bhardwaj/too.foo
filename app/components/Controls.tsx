@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { getPrefersReducedMotion, createMotionObserver } from '../lib/motion';
 import { HeroRef } from './Hero';
-import DateDisplay from './DateDisplay';
 import { linearToLogYear, yearToLinear, formatLogTime, yearsToSeconds } from '../lib/timeScale';
 
 type Direction = 1 | -1;
@@ -187,14 +186,13 @@ export default function Controls({
   useEffect(() => {
     if (!heroRef.current) return;
     heroRef.current.updateScene(currentYearRef.current, direction, !reduceMotion && !paused);
-  }, [direction, reduceMotion, paused, heroRef]);
+    // Notify parent of year change
+    onTimeChange(currentYearRef.current);
+  }, [direction, reduceMotion, paused, heroRef, onTimeChange]);
 
   return (
     <>
-      {/* Date Display */}
-      <DateDisplay year={year} speed={speed} />
-
-      {/* Controls */}
+      {/* Controls - Header section */}
       <div 
         className="fixed top-4 right-4 z-40 flex flex-col gap-2 rounded-2xl bg-black/40 backdrop-blur border border-white/10 p-3 shadow-lg"
         role="region"

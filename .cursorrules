@@ -58,3 +58,5 @@ Worktrees are at: `~/.cursor/worktrees/too.foo/issue-{number}`
 
 The `npm run task` command outputs this path - use it!
 
+
+
