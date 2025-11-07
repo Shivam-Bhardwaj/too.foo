@@ -27,7 +27,7 @@ const ResearchGradeHero = forwardRef<ResearchHeroRef>((props, ref) => {
   
   // Time state
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [timeSpeed, setTimeSpeed] = useState(1/60); // 1 day per second
+  const [timeSpeed, setTimeSpeed] = useState(11 * 365.25 / 60); // 11 years per second (1 solar cycle)
   const [isPlaying, setIsPlaying] = useState(false);
   const [timeMode, setTimeMode] = useState<TimeMode>('realtime');
   
@@ -141,7 +141,8 @@ const ResearchGradeHero = forwardRef<ResearchHeroRef>((props, ref) => {
         window.addEventListener('resize', handleResize);
         
         // Initial render
-        scene.update(currentDate, timeSpeed, false);
+        // When not playing, just update the scene without advancing time
+        scene.update(currentDate, 0, false);
         setLoading(false);
         if (canvasRef.current) {
           canvasRef.current.dataset.sceneReady = 'true';
@@ -175,8 +176,9 @@ const ResearchGradeHero = forwardRef<ResearchHeroRef>((props, ref) => {
 
     const animate = () => {
       if (sceneRef.current && isPlaying) {
-        // Update date
-        const newDate = new Date(currentDate.getTime() + timeSpeed * 24 * 60 * 60 * 1000);
+        // Update date - timeSpeed is in days per frame
+        const msPerDay = 24 * 60 * 60 * 1000;
+        const newDate = new Date(currentDate.getTime() + timeSpeed * msPerDay);
         setCurrentDate(newDate);
         
         // Update scene

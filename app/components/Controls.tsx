@@ -105,14 +105,19 @@ export default function Controls({
         setYear(finalYear);
         onTimeChange(finalYear);
       } else {
-        // Auto-advance time at selected speed (logarithmic)
-        const currentLog = yearToLinear(current, MIN_LOG_YEARS, MAX_LOG_YEARS);
-        const speedInLogSpace = (speed / MAX_LOG_YEARS) * dt * direction;
-        const newLogValue = Math.max(0, Math.min(1, currentLog + speedInLogSpace));
-        finalYear = linearToLogYear(newLogValue, MIN_LOG_YEARS, MAX_LOG_YEARS);
+        // Auto-advance time at selected speed (years per second)
+        // speed is in years/sec, dt is in seconds
+        finalYear = current + (speed * dt * direction);
+        
+        // Clamp to valid range
+        finalYear = Math.max(MIN_LOG_YEARS, Math.min(MAX_LOG_YEARS, finalYear));
+        
         currentYearRef.current = finalYear;
         targetYearRef.current = finalYear;
         setYear(finalYear);
+        
+        // Update slider position to match
+        const newLogValue = yearToLinear(finalYear, MIN_LOG_YEARS, MAX_LOG_YEARS);
         setLogSliderValue(newLogValue);
         onTimeChange(finalYear);
       }

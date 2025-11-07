@@ -441,6 +441,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   
   // ===== Termination Shock Visualization =====
   // Show the boundary where solar wind slows from supersonic to subsonic
+  // Using volumetric glow effect instead of wireframe for realistic appearance
   const terminationShockGroup = new THREE.Group();
   terminationShockGroup.name = 'terminationShock';
   scene.add(terminationShockGroup);
@@ -452,16 +453,49 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     48
   );
   tsGeometry.scale(0.03, 0.03, 0.03); // Scale AU to scene units
-  const tsMaterial = new THREE.MeshBasicMaterial({
-    color: 0xffaa44,
+  
+  // Main volumetric glow layer - looks like glowing plasma/energy field
+  const tsVolumetricMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0xff8844,
+    emissive: 0xff6600, // Strong orange glow
+    emissiveIntensity: 0.8,
     transparent: true,
     opacity: 0.15,
-    wireframe: true,
+    side: THREE.DoubleSide,
+    roughness: 0.9,
+    metalness: 0.0,
+    transmission: 0.95, // Highly transparent
+    thickness: 0.2,
+    ior: 1.1
+  });
+  const terminationShockVolumetric = new THREE.Mesh(tsGeometry, tsVolumetricMaterial);
+  terminationShockVolumetric.setRotationFromMatrix(apexBasis);
+  terminationShockGroup.add(terminationShockVolumetric);
+  
+  // Outer glow halo for depth
+  const tsGlowGeometry = tsGeometry.clone();
+  tsGlowGeometry.scale(1.05, 1.05, 1.05);
+  const tsGlowMaterial = new THREE.MeshBasicMaterial({
+    color: 0xff6600,
+    transparent: true,
+    opacity: 0.08,
     side: THREE.DoubleSide
   });
-  const terminationShock = new THREE.Mesh(tsGeometry, tsMaterial);
-  terminationShock.setRotationFromMatrix(apexBasis);
-  terminationShockGroup.add(terminationShock);
+  const terminationShockGlow = new THREE.Mesh(tsGlowGeometry, tsGlowMaterial);
+  terminationShockGlow.setRotationFromMatrix(apexBasis);
+  terminationShockGroup.add(terminationShockGlow);
+  
+  // Edge highlights using EdgesGeometry for subtle structure definition
+  const tsEdgesGeometry = new THREE.EdgesGeometry(tsGeometry, 15); // Threshold angle for edges
+  const tsEdgesMaterial = new THREE.LineBasicMaterial({
+    color: 0xffaa44,
+    transparent: true,
+    opacity: 0.25,
+    linewidth: 1
+  });
+  const terminationShockEdges = new THREE.LineSegments(tsEdgesGeometry, tsEdgesMaterial);
+  terminationShockEdges.setRotationFromMatrix(apexBasis);
+  terminationShockGroup.add(terminationShockEdges);
   
   // ===== Bow Shock Visualization (Optional/Controversial) =====
   const bowShockGroup = new THREE.Group();
