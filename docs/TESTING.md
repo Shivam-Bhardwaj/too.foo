@@ -48,3 +48,19 @@ The visual suite will:
 - Capture the heliosphere canvas on `/research`
 
 Baseline images live under `tests/visual/__screenshots__/`. Commit updated snapshots whenever the expected rendering changes. If you only want to verify locally, leave the snapshots untracked and run with `--update-snapshots`.
+
+### Continuous Integration
+
+A dedicated workflow (`.github/workflows/test-suite.yml`) runs automatically on `push`/`pull_request`:
+
+1. **Unit & Integration job** – Ubuntu runner, executes `npm ci` + `npm test`.
+2. **Visual job** – Self-hosted runner labeled `self-hosted, linux, visual-tests`, executes `npm run test:visual`.
+
+To provision the visual runner:
+
+```bash
+npx playwright install --with-deps chromium   # once per machine (installs browser + apt deps)
+# Register the runner with GitHub and add the custom label "visual-tests"
+```
+
+The workflow uploads Playwright reports (`playwright-report/`, `test-results/`) as artifacts, so reviewers can inspect diffs when snapshots fail.
