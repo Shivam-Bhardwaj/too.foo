@@ -222,7 +222,8 @@ export async function createResearchGradeScene(canvas: HTMLCanvasElement): Promi
     32
   );
   
-  if (bowShockGeometry.attributes.position.count > 0) {
+  const bowShockPositions = bowShockGeometry.getAttribute('position');
+  if (bowShockPositions && bowShockPositions.count > 0) {
     bowShockGeometry.scale(AU_SCALE, AU_SCALE, AU_SCALE);
     
     const bowShockMaterial = new THREE.MeshBasicMaterial({

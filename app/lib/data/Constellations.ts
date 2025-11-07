@@ -319,7 +319,7 @@ export function getStarPosition(starName: string, starCatalog: StarData[]): THRE
 export function generateConstellationLines(
   constellation: Constellation,
   starCatalog: StarData[]
-): THREE.BufferGeometry {
+): THREE.BufferGeometry | null {
   const points: THREE.Vector3[] = [];
   
   constellation.connections.forEach(conn => {
@@ -331,11 +331,10 @@ export function generateConstellationLines(
       points.push(toPos);
     }
   });
-  
-  const geometry = new THREE.BufferGeometry();
-  if (points.length > 0) {
-    geometry.setFromPoints(points);
+
+  if (points.length === 0) {
+    return null;
   }
-  
-  return geometry;
+
+  return new THREE.BufferGeometry().setFromPoints(points);
 }

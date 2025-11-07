@@ -475,7 +475,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     32
   );
   
-  if (bowShockGeometry.attributes.position.count > 0) {
+  const bowShockPositions = bowShockGeometry.getAttribute('position');
+  if (bowShockPositions && bowShockPositions.count > 0) {
     bowShockGeometry.scale(0.03, 0.03, 0.03);
     const bowShockMaterial = new THREE.MeshBasicMaterial({
       color: 0xff44ff,
@@ -669,7 +670,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   // Create constellation lines
   COMPLETE_CONSTELLATIONS.forEach(constellation => {
     const lineGeometry = generateConstellationLines(constellation, allStars);
-    if (lineGeometry.attributes.position.count > 0) {
+    if (lineGeometry) {
       const lineMaterial = new THREE.LineBasicMaterial({
         color: 0x4444ff,
         transparent: true,
