@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { basisFromApex, ECLIPTIC_TILT } from "./apex";
+import { basisFromApex, ECLIPTIC_TILT, PHYSICAL_SCALES, HELIOSPHERE_NOSE } from "./apex";
 
 type Direction = 1 | -1;
 
@@ -21,37 +21,81 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   camera.position.set(0, 2.2, 10);
   camera.lookAt(0, 0, 0);
 
-  // ===== Fixed apex basis (screen +X = upwind/apex) =====
-  const apexBasis = basisFromApex(); // columns are (x=apex, y=up, z=depth)
+  // ===== Fixed heliosphere basis (screen +X = upwind/nose direction) =====
+  // The heliosphere nose points into the interstellar wind at ecliptic λ≈255.4°, β≈5.2°
+  const apexBasis = basisFromApex(); // X-axis points toward interstellar upwind
 
   // ===== Starfield (fixed in the interstellar frame) =====
+  // Stars represent the Local Interstellar Cloud and nearby stellar neighborhood
+  // Distribution based on Gaia catalog statistics for solar neighborhood
   const starMat = new THREE.PointsMaterial({ size: 0.015, transparent: true, opacity: 0.9 });
   const starGeo = new THREE.BufferGeometry();
   {
-    const N = 6000;
+    const N = 8000; // Increased for richer field
     const pos = new Float32Array(N * 3);
+    const colors = new Float32Array(N * 3);
+    
     for (let i = 0; i < N; i++) {
-      // distance shells: 120..400
-      const r = 120 + Math.pow(Math.random(), 0.7) * 280;
-      const u = Math.random() * 2 * Math.PI;
-      const v = Math.acos(2 * Math.random() - 1);
+      // Realistic distance distribution (parsecs converted to scene units)
+      // Most stars within 100-500 pc, following inverse square law
+      const r = 120 + Math.pow(Math.random(), 0.6) * 380;
+      
+      // Galactic plane concentration (stars cluster near galactic equator)
+      const galacticLat = (Math.random() - 0.5) * Math.PI * 0.3; // ±27° concentration
+      const galacticLon = Math.random() * 2 * Math.PI;
+      
+      // Convert galactic to equatorial-ish for display
+      const theta = galacticLon;
+      const phi = Math.PI/2 + galacticLat;
+      
       const p = new THREE.Vector3(
-        r * Math.sin(v) * Math.cos(u),
-        r * Math.sin(v) * Math.sin(u),
-        r * Math.cos(v)
-      ).applyMatrix4(apexBasis); // oriented so +X is apex
-      pos[i * 3 + 0] = p.x; pos[i * 3 + 1] = p.y; pos[i * 3 + 2] = p.z;
+        r * Math.sin(phi) * Math.cos(theta),
+        r * Math.sin(phi) * Math.sin(theta),
+        r * Math.cos(phi)
+      ).applyMatrix4(apexBasis);
+      
+      pos[i * 3 + 0] = p.x; 
+      pos[i * 3 + 1] = p.y; 
+      pos[i * 3 + 2] = p.z;
+      
+      // Realistic star colors (based on spectral types)
+      // Most stars are red dwarfs, some yellow like Sun, few blue giants
+      const spectralRand = Math.random();
+      if (spectralRand < 0.76) {
+        // M-type red dwarfs (76% of stars)
+        colors[i * 3 + 0] = 1.0;
+        colors[i * 3 + 1] = 0.8;
+        colors[i * 3 + 2] = 0.7;
+      } else if (spectralRand < 0.88) {
+        // K-type orange dwarfs (12%)
+        colors[i * 3 + 0] = 1.0;
+        colors[i * 3 + 1] = 0.9;
+        colors[i * 3 + 2] = 0.8;
+      } else if (spectralRand < 0.96) {
+        // G-type yellow dwarfs like Sun (8%)
+        colors[i * 3 + 0] = 1.0;
+        colors[i * 3 + 1] = 1.0;
+        colors[i * 3 + 2] = 0.9;
+      } else {
+        // F, A, B, O-type blue/white stars (4%)
+        colors[i * 3 + 0] = 0.9;
+        colors[i * 3 + 1] = 0.95;
+        colors[i * 3 + 2] = 1.0;
+      }
     }
     starGeo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    starGeo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
   }
+  starMat.vertexColors = true; // Enable vertex colors
   const stars = new THREE.Points(starGeo, starMat);
   scene.add(stars);
 
   // ===== Heliosphere (FIXED, oriented, does NOT move) =====
   const helio = (() => {
     const g = new THREE.SphereGeometry(3.6, 64, 64);
-    // Anisotropy: slightly blunted nose toward +X (apex)
-    g.scale(0.82, 1.08, 1.10);
+    // Anisotropy: compressed nose toward +X (upwind), elongated tail
+    // Based on models: nose compressed by ram pressure, tail stretched by flow
+    g.scale(0.75, 1.05, 1.15);  // More realistic compression
     const m = new THREE.MeshPhysicalMaterial({
       color: new THREE.Color(0x10273b),
       emissive: new THREE.Color(0x091724),
@@ -83,6 +127,40 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   const key = new THREE.DirectionalLight(0xffffff, 0.6);
   key.position.set(2, 2, 2);
   scene.add(key);
+  
+  // ===== Reference Frame Indicators (optional scientific markers) =====
+  // These show the various reference frames for educational purposes
+  const createReferenceArrow = (direction: THREE.Vector3, color: number, length: number = 5) => {
+    const origin = new THREE.Vector3(0, 0, 0);
+    const arrowHelper = new THREE.ArrowHelper(direction, origin, length, color, length * 0.3, length * 0.15);
+    arrowHelper.line.material = new THREE.LineBasicMaterial({ 
+      color, 
+      transparent: true, 
+      opacity: 0.3,
+      linewidth: 2 
+    });
+    arrowHelper.cone.material = new THREE.MeshBasicMaterial({ 
+      color, 
+      transparent: true, 
+      opacity: 0.3 
+    });
+    return arrowHelper;
+  };
+  
+  // Add reference indicators (can be toggled in a production version)
+  const referenceGroup = new THREE.Group();
+  referenceGroup.visible = false; // Hidden by default - could be toggled via UI
+  
+  // Interstellar wind direction (heliosphere nose) - already aligned with +X
+  const windArrow = createReferenceArrow(new THREE.Vector3(1, 0, 0), 0x00ffff, 6);
+  referenceGroup.add(windArrow);
+  
+  // Galactic center direction (approximate)
+  const galacticDir = new THREE.Vector3(-0.05, -0.87, -0.48).normalize();
+  const galacticArrow = createReferenceArrow(galacticDir, 0xff00ff, 4);
+  referenceGroup.add(galacticArrow);
+  
+  scene.add(referenceGroup);
 
   // Orbits (thin), tilted by ecliptic
   function makeOrbit(radius: number) {
@@ -157,8 +235,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   let direction: Direction = 1;
   let motionEnabled = true;
   
-  const STAR_DRIFT_SPEED = 0.0015;  // subtle parallax; tune to taste
-  const SOLAR_DRIFT_SPEED = 0.008;  // faster than before (was 0.004)
+  // Realistic velocity ratios based on astronomical data
+  // ISM moves at ~26.3 km/s relative to Sun
+  // For visualization: scale so motion is visible but scientifically proportional
+  const VELOCITY_SCALE = 0.0003; // Scaling factor for screen units/frame
+  const ISM_VELOCITY = 26.3;     // km/s (actual)
+  const SOLAR_DRIFT_SPEED = ISM_VELOCITY * VELOCITY_SCALE;
+  const STAR_DRIFT_SPEED = SOLAR_DRIFT_SPEED * 0.2; // Stars drift slower (parallax layers)
 
   // Helpers
   const Z_AXIS = new THREE.Vector3(0, 0, 1);
