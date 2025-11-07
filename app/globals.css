@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-cosmic-indigo text-white antialiased;
+  }
+}
+
+@layer utilities {
+  .clamp-text {
+    font-size: clamp(2rem, 5vw, 4.5rem);
+  }
+  
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+}
+
+/* Custom slider styling */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #99E6FF;
+  cursor: pointer;
+  border: 2px solid #0B0F1A;
+  box-shadow: 0 0 4px rgba(153, 230, 255, 0.5);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #99E6FF;
+  cursor: pointer;
+  border: 2px solid #0B0F1A;
+  box-shadow: 0 0 4px rgba(153, 230, 255, 0.5);
+}
+
+input[type="range"]:focus {
+  outline: none;
+}
+
+input[type="range"]:focus::-webkit-slider-thumb {
+  box-shadow: 0 0 8px rgba(153, 230, 255, 0.8);
+}
+
+input[type="range"]:focus::-moz-range-thumb {
+  box-shadow: 0 0 8px rgba(153, 230, 255, 0.8);
+}
+
+/* Focus rings */
+*:focus-visible {
+  outline: 2px solid rgba(153, 230, 255, 0.5);
+  outline-offset: 2px;
+}
+
