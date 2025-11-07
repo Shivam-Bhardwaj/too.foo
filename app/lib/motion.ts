@@ -1,5 +1,3 @@
-import { APEX_DIR, ECLIPTIC_TILT } from './apex';
-
 export function getPrefersReducedMotion(): boolean {
   if (typeof window === 'undefined') return false;
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;

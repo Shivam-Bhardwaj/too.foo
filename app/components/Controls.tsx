@@ -21,15 +21,20 @@ export default function Controls({
   onMotionChange,
   onPauseChange,
 }: ControlsProps) {
-  const [time, setTime] = useState(0);
+  const [time, setTime] = useState(0.5);
   const [direction, setDirection] = useState<Direction>(1);
   const [paused, setPaused] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
   const [announcement, setAnnouncement] = useState('');
   const sliderRef = useRef<HTMLInputElement>(null);
-  const lastTimeRef = useRef(0);
-  const targetTimeRef = useRef(0);
+  const lastTimeRef = useRef(0.5);
+  const targetTimeRef = useRef(0.5);
   const animationFrameRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    setAnnouncement('Direction: Apex. Time set to 0.5.');
+    onTimeChange(0.5);
+  }, [onTimeChange]);
 
   useEffect(() => {
     const systemReduced = getPrefersReducedMotion();
@@ -42,10 +47,11 @@ export default function Controls({
       if (reduced) {
         setAnnouncement('Motion off (respects your system setting).');
       }
+      heroRef.current?.updateScene(lastTimeRef.current, direction, !reduced && !paused);
     });
 
     return cleanup;
-  }, [onMotionChange]);
+  }, [onMotionChange, heroRef, direction, paused]);
 
   useEffect(() => {
     if (reduceMotion || paused) {
@@ -53,6 +59,7 @@ export default function Controls({
         cancelAnimationFrame(animationFrameRef.current);
         animationFrameRef.current = null;
       }
+      heroRef.current?.updateScene(lastTimeRef.current, direction, false);
       return;
     }
 
@@ -82,9 +89,7 @@ export default function Controls({
       }
       
       // Update scene
-      if (heroRef.current) {
-        heroRef.current.updateScene(finalTime, direction, !reduceMotion && !paused);
-      }
+      heroRef.current?.updateScene(finalTime, direction, true);
 
       animationFrameRef.current = requestAnimationFrame(animate);
     }
@@ -101,8 +106,10 @@ export default function Controls({
   const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseFloat(e.target.value);
     targetTimeRef.current = value;
+    lastTimeRef.current = value;
     setTime(value);
     onTimeChange(value);
+    heroRef.current?.updateScene(value, direction, !reduceMotion && !paused);
   };
 
   const handleDirectionToggle = () => {
@@ -110,6 +117,7 @@ export default function Controls({
     setDirection(newDirection);
     onDirectionChange(newDirection);
     setAnnouncement(`Direction: ${newDirection === 1 ? 'Apex' : 'Reverse'}`);
+    heroRef.current?.updateScene(lastTimeRef.current, newDirection, !reduceMotion && !paused);
   };
 
   const handlePauseToggle = () => {
@@ -117,6 +125,7 @@ export default function Controls({
     setPaused(newPaused);
     onPauseChange(newPaused);
     setAnnouncement(newPaused ? 'Background paused.' : 'Background resumed.');
+    heroRef.current?.updateScene(lastTimeRef.current, direction, !reduceMotion && !newPaused);
   };
 
   const handleReduceMotionToggle = () => {
@@ -127,6 +136,7 @@ export default function Controls({
       if (newReduced) {
         setAnnouncement('Motion off (respects your system setting).');
       }
+      heroRef.current?.updateScene(lastTimeRef.current, direction, !newReduced && !paused);
     }
   };
 
@@ -137,6 +147,11 @@ export default function Controls({
   };
 
   const motionDisabled = reduceMotion || paused;
+
+  useEffect(() => {
+    if (!heroRef.current) return;
+    heroRef.current.updateScene(lastTimeRef.current, direction, !reduceMotion && !paused);
+  }, [direction, reduceMotion, paused, heroRef]);
 
   return (
     <div className="fixed bottom-4 right-4 z-10 flex flex-col gap-3 bg-cosmic-indigo/90 backdrop-blur-sm border border-cosmic-cyan/20 rounded-lg p-4 shadow-lg">
