@@ -9,6 +9,11 @@
     "start": "next start",
     "api": "python backend/app.py",
     "generate-stills": "node scripts/generate-stills.js",
+    "test": "vitest run --config ./vitest.config.ts",
+    "test:watch": "vitest --config ./vitest.config.ts",
+    "start:visual": "serve out -l 4173 --single",
+    "test:visual": "npm run build && playwright test",
+    "test:visual:update": "npm run build && playwright test --update-snapshots",
     "task": "node scripts/cursor-agent.js",
     "create-task": "node scripts/create-task.js",
     "worktree": "node scripts/worktree.js",
@@ -25,12 +30,18 @@
     "three": "^0.181.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
     "@types/node": "^20.0.0",
     "@types/react": "^18.0.0",
     "autoprefixer": "^10.4.0",
     "canvas": "^3.2.0",
+    "happy-dom": "^15.11.5",
     "postcss": "^8.4.0",
+    "serve": "^14.2.3",
     "tailwindcss": "^3.3.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vitest": "^4.0.7"
   }
 }

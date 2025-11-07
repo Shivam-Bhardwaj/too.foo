@@ -56,3 +56,10 @@ Thumbs.db
 # Large files
 *.node
 
+# Cursor workflow metadata
+.cursor-workflow*.json
+
+# Playwright artifacts
+/playwright-report/
+/test-results/
+/blob-report/

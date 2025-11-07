@@ -113,12 +113,14 @@ const ResearchGradeHero = forwardRef<ResearchHeroRef>((props, ref) => {
   // Initialize scene
   useEffect(() => {
     if (!canvasRef.current) return;
+    canvasRef.current.dataset.sceneReady = 'false';
 
     // Check WebGL support
     const gl = canvasRef.current.getContext('webgl2') || canvasRef.current.getContext('webgl');
     if (!gl) {
       setWebglSupported(false);
       setInitFailed(true);
+      canvasRef.current.dataset.sceneReady = 'failed';
       return;
     }
 
@@ -141,16 +143,26 @@ const ResearchGradeHero = forwardRef<ResearchHeroRef>((props, ref) => {
         // Initial render
         scene.update(currentDate, timeSpeed, false);
         setLoading(false);
+        if (canvasRef.current) {
+          canvasRef.current.dataset.sceneReady = 'true';
+        }
+        window.dispatchEvent(new CustomEvent('research-scene-ready'));
 
         return () => {
           window.removeEventListener('resize', handleResize);
           scene.dispose();
           sceneRef.current = null;
+          if (canvasRef.current) {
+            canvasRef.current.dataset.sceneReady = 'false';
+          }
         };
       } catch (error) {
         console.error('Failed to initialize WebGL scene:', error);
         setInitFailed(true);
         setLoading(false);
+        if (canvasRef.current) {
+          canvasRef.current.dataset.sceneReady = 'failed';
+        }
       }
     };
 
@@ -295,6 +307,8 @@ const ResearchGradeHero = forwardRef<ResearchHeroRef>((props, ref) => {
         ref={canvasRef}
         className="absolute inset-0 w-full h-full"
         style={{ touchAction: 'none' }}
+        data-testid="research-scene-canvas"
+        data-scene-ready="false"
       />
       
       {loading && (

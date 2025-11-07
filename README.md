@@ -92,6 +92,15 @@ github-portfolio/           # THE ONLY REPO ON YOUR GITHUB
 - [Project Plan](docs/PROJECT_PLAN.md) - Detailed feature breakdown
 - [Architecture](docs/ARCHITECTURE.md) - System design and data flow
 - [Configuration](config/README.md) - Environment setup
+- [Testing Guide](docs/TESTING.md) - Unit, integration, and visual test workflows
+
+## ✅ Testing
+
+```bash
+npm test                     # unit + integration (Vitest)
+npm run test:visual          # Playwright regression (requires baselines)
+npm run test:visual:update   # rebuild site + refresh screenshots
+```
 
 ## 🛠 Tech Stack
 
