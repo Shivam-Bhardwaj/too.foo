@@ -11,7 +11,7 @@ on:
 jobs:
   unit:
     name: Unit & Integration
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, visual-tests]
     timeout-minutes: 20
     steps:
       - name: Checkout

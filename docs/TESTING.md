@@ -53,8 +53,8 @@ Baseline images live under `tests/visual/__screenshots__/`. Commit updated snaps
 
 A dedicated workflow (`.github/workflows/test-suite.yml`) runs automatically on `push`/`pull_request`:
 
-1. **Unit & Integration job** – Ubuntu runner, executes `npm ci` + `npm test`.
-2. **Visual job** – Self-hosted runner labeled `self-hosted, linux, visual-tests`, executes `npm run test:visual`.
+1. **Unit & Integration job** – Executes `npm ci` + `npm test` on the self-hosted runner.
+2. **Visual job** – Reuses the same runner (labels `self-hosted, linux, visual-tests`) to run `npm run test:visual` after unit tests finish.
 
 To provision the visual runner:
 
