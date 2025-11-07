@@ -140,6 +140,7 @@ export function TimeControls({
           <button
             className="p-3 bg-blue-600 hover:bg-blue-700 rounded-full transition-colors"
             onClick={onPlayPause}
+            aria-label={isPlaying ? 'Pause simulation' : 'Play simulation'}
           >
             {isPlaying ? <Pause size={24} /> : <Play size={24} />}
           </button>

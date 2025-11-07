@@ -157,7 +157,12 @@ const ResearchGradeHero = forwardRef<ResearchHeroRef, ResearchGradeHeroProps>((p
         
         // Initial render
         // When not playing, just update the scene without advancing time
-        scene.update(currentDateRef.current, 0, false);
+        try {
+          scene.update(currentDateRef.current, 0, false);
+        } catch (error) {
+          console.error('Error performing initial scene update', error);
+        }
+        updateDataOverlay(currentDateRef.current);
         
         // Notify parent component of initial date
         if (onDateChange) {
