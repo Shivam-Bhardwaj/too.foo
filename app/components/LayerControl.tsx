@@ -12,6 +12,7 @@ const LAYER_LABELS: Record<keyof ComponentVisibility, string> = {
   heliosphere: 'Heliosphere Surface',
   helioglow: 'Helioglow (UV)',
   terminationShock: 'Termination Shock',
+  bowShock: 'Bow Shock (Theoretical)',
   solarWind: 'Solar Wind Streams',
   interstellarWind: 'Interstellar Wind',
   planets: 'Planets',
@@ -19,6 +20,12 @@ const LAYER_LABELS: Record<keyof ComponentVisibility, string> = {
   moon: 'Moon',
   stars: 'Background Stars',
   famousStars: 'Famous Stars',
+  voyagers: 'Voyager Spacecraft',
+  distanceMarkers: 'Distance Markers (AU)',
+  solarApex: 'Solar Apex Direction',
+  labels: 'Object Labels',
+  interstellarObjects: 'Interstellar Objects',
+  constellations: 'Constellations',
 };
 
 export default function LayerControl({ heroRef }: LayerControlProps) {
@@ -27,6 +34,7 @@ export default function LayerControl({ heroRef }: LayerControlProps) {
     heliosphere: true,
     helioglow: true,
     terminationShock: true,
+    bowShock: false,
     solarWind: true,
     interstellarWind: true,
     planets: true,
@@ -34,6 +42,12 @@ export default function LayerControl({ heroRef }: LayerControlProps) {
     moon: true,
     stars: true,
     famousStars: true,
+    voyagers: true,
+    distanceMarkers: true,
+    solarApex: true,
+    labels: true,
+    interstellarObjects: true,
+    constellations: false,
   });
 
   const handleToggle = (key: keyof ComponentVisibility) => {

@@ -10,6 +10,13 @@ import {
   heliopauseDistance,
   terminationShockDistance
 } from "./heliosphericPhysics";
+import { HeliosphereModel } from "./physics/HeliosphereModel";
+import { VoyagerTrajectories } from "./physics/SpacecraftTrajectories";
+import { JulianDate } from "./data/AstronomicalDataStore";
+import { PlanetaryEphemeris, PLANET_PROPERTIES } from "./data/PlanetaryEphemeris";
+import { LabelManager } from "./LabelSystem";
+import { getAllInterstellarObjects, generateOumuamuaTrajectory, generateBorisovTrajectory } from "./data/InterstellarObjects";
+import { COMPLETE_CONSTELLATIONS, CONSTELLATION_STARS, generateConstellationLines } from "./data/Constellations";
 
 type Direction = 1 | -1;
 
@@ -17,6 +24,7 @@ export type ComponentVisibility = {
   heliosphere: boolean;
   helioglow: boolean;
   terminationShock: boolean;
+  bowShock: boolean;
   solarWind: boolean;
   interstellarWind: boolean;
   planets: boolean;
@@ -24,6 +32,12 @@ export type ComponentVisibility = {
   moon: boolean;
   stars: boolean;
   famousStars: boolean;
+  voyagers: boolean;
+  distanceMarkers: boolean;
+  solarApex: boolean;
+  labels: boolean;
+  interstellarObjects: boolean;
+  constellations: boolean;
 };
 
 export type SceneAPI = {
@@ -67,6 +81,10 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   // ===== Fixed heliosphere basis (screen +X = upwind/nose direction) =====
   // The heliosphere nose points into the interstellar wind at ecliptic λ≈255.4°, β≈5.2°
   const apexBasis = basisFromApex(); // X-axis points toward interstellar upwind
+  
+  // Initialize heliosphere model for accurate boundaries
+  const heliosphereModel = new HeliosphereModel();
+  const currentJD = JulianDate.fromDate(new Date());
 
   // ===== Starfield (galactic background streaming past) =====
   // Stars represent the Milky Way galaxy streaming past as the heliosphere moves through it
@@ -165,105 +183,42 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   });
   scene.add(famousStarsGroup);
 
-  // ===== Heliosphere (DYNAMIC - comet-like teardrop shape that changes with solar wind) =====
-  // The heliosphere shape changes dynamically based on solar wind pressure
-  // Solar wind variations cause the heliosphere to expand and contract
-  // Shape: Compressed nose (ram pressure) + elongated tail (flow stretching)
+  // ===== Heliosphere (MHD-based asymmetric shape) =====
+  // Use accurate MHD model for heliosphere boundaries
   const helio = (() => {
-    // Create teardrop/comet shape geometry with dynamic parameters
-    const createTeardropGeometry = (windPressure: number = 1.0) => {
-      const segments = 64;
-      const rings = 48;
-      // Dynamic radius based on solar wind pressure (higher pressure = larger heliosphere)
-      const baseRadius = 3.6;
-      const radius = baseRadius * (0.85 + windPressure * 0.3); // Varies between 85% and 115% of base
-      // Dynamic compression/stretch based on wind pressure
-      const noseCompression = 0.65 + (1.0 - windPressure) * 0.15;  // Higher pressure = less compression
-      const tailStretch = 2.2 + (windPressure - 1.0) * 0.4;        // Higher pressure = more tail stretch
-      
-      const geometry = new THREE.BufferGeometry();
-      const vertices: number[] = [];
-      const normals: number[] = [];
-      const uvs: number[] = [];
-      const indices: number[] = [];
-      
-      // Generate vertices in teardrop shape
-      for (let ring = 0; ring <= rings; ring++) {
-        const v = ring / rings; // 0 to 1
-        // Map v to teardrop profile: compressed at front (v=0), stretched at back (v=1)
-        const profileX = v < 0.5 
-          ? noseCompression * (1 - Math.pow(2 * v, 1.5))  // Compressed nose
-          : -tailStretch * Math.pow(2 * (v - 0.5), 0.7);  // Elongated tail
-        
-        const profileRadius = Math.sqrt(1 - Math.pow(v - 0.5, 2) * 4) * radius;
-        
-        for (let seg = 0; seg <= segments; seg++) {
-          const u = seg / segments;
-          const theta = u * Math.PI * 2;
-          
-          const x = profileX;
-          const y = Math.cos(theta) * profileRadius;
-          const z = Math.sin(theta) * profileRadius;
-          
-          vertices.push(x, y, z);
-          
-          // Calculate normals for smooth shading
-          const normal = new THREE.Vector3(x - profileX, y, z).normalize();
-          normals.push(normal.x, normal.y, normal.z);
-          
-          uvs.push(u, v);
-        }
-      }
-      
-      // Generate indices for faces
-      for (let ring = 0; ring < rings; ring++) {
-        for (let seg = 0; seg < segments; seg++) {
-          const a = ring * (segments + 1) + seg;
-          const b = ring * (segments + 1) + seg + 1;
-          const c = (ring + 1) * (segments + 1) + seg;
-          const d = (ring + 1) * (segments + 1) + seg + 1;
-          
-          indices.push(a, c, b);
-          indices.push(b, c, d);
-        }
-      }
-      
-      geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-      geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
-      geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
-      geometry.setIndex(indices);
-      geometry.computeVertexNormals();
-      
-      return geometry;
-    };
+    // Create heliopause geometry using MHD model
+    const hpGeometry = heliosphereModel.generateParametricSurface(
+      'heliopause',
+      currentJD,
+      64
+    );
+    hpGeometry.scale(0.03, 0.03, 0.03); // Scale AU to scene units
     
-    const g = createTeardropGeometry(1.0); // Initial geometry
-    
-    // Realistic heliosphere material - reduced brightness for more realistic appearance
+    // Realistic heliosphere material
     const m = new THREE.MeshPhysicalMaterial({
-      color: new THREE.Color(0x1a2a4e),  // Darker blue-grey
-      emissive: new THREE.Color(0x0a1a2a), // Much dimmer helioglow
-      transmission: 0.85,  // More transparent
+      color: new THREE.Color(0x1a2a4e),
+      emissive: new THREE.Color(0x0a1a2a),
+      transmission: 0.85,
       thickness: 0.4,
       roughness: 0.95,
       metalness: 0.0,
       transparent: true,
-      opacity: 0.25,  // Much more subtle
+      opacity: 0.25,
       side: THREE.DoubleSide
     });
     
-    const mesh = new THREE.Mesh(g, m);
-    mesh.setRotationFromMatrix(apexBasis); // nose → +X (upwind direction)
+    const mesh = new THREE.Mesh(hpGeometry, m);
+    mesh.setRotationFromMatrix(apexBasis);
     mesh.name = 'heliosphere';
     scene.add(mesh);
     
-    // Add subtle helioglow effect (faint emission from UV interactions)
-    const glowGeometry = g.clone();
-    glowGeometry.scale(1.1, 1.1, 1.1); // Slightly larger
+    // Add subtle helioglow effect
+    const glowGeometry = hpGeometry.clone();
+    glowGeometry.scale(1.1, 1.1, 1.1);
     const glowMaterial = new THREE.MeshBasicMaterial({
       color: new THREE.Color(0x1a2a4a),
       transparent: true,
-      opacity: 0.03,  // Much more subtle glow
+      opacity: 0.03,
       side: THREE.DoubleSide
     });
     const glow = new THREE.Mesh(glowGeometry, glowMaterial);
@@ -271,32 +226,46 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     glow.name = 'helioglow';
     scene.add(glow);
     
-    return { mesh, glow, geometry: g, createTeardropGeometry };
+    return { mesh, glow, geometry: hpGeometry, heliosphereModel };
   })();
   
   // ===== Interstellar Wind Particles =====
   // Interstellar medium flows into the heliosphere from the upwind direction (+X)
+  // Flow direction: λ=255.4°, β=5.2° (ecliptic coordinates)
+  // Speed: 26.3 km/s relative to Sun
   const ismWindCount = 1500;
   const ismWindGeo = new THREE.BufferGeometry();
   const ismWindPositions = new Float32Array(ismWindCount * 3);
   const ismWindVelocities = new Float32Array(ismWindCount * 3);
   const ismWindColors = new Float32Array(ismWindCount * 3);
   
+  // ISM flow direction in ecliptic coordinates
+  const ismFlowLon = 255.4 * Math.PI / 180;
+  const ismFlowLat = 5.2 * Math.PI / 180;
+  const ismFlowDirection = new THREE.Vector3(
+    -Math.cos(ismFlowLat) * Math.cos(ismFlowLon),
+    -Math.cos(ismFlowLat) * Math.sin(ismFlowLon),
+    -Math.sin(ismFlowLat)
+  ).normalize();
+  
   for (let i = 0; i < ismWindCount; i++) {
-    // Start from upwind direction (positive X, spread out)
+    // Start from upwind direction (positive X, spread out uniformly)
     const spread = 8 + Math.random() * 4; // Start 8-12 units away
     const offsetY = (Math.random() - 0.5) * 6;
     const offsetZ = (Math.random() - 0.5) * 6;
     
-    ismWindPositions[i * 3 + 0] = spread;
-    ismWindPositions[i * 3 + 1] = offsetY;
-    ismWindPositions[i * 3 + 2] = offsetZ;
+    // Position particles upstream
+    const startPos = new THREE.Vector3(spread, offsetY, offsetZ);
+    ismWindPositions[i * 3 + 0] = startPos.x;
+    ismWindPositions[i * 3 + 1] = startPos.y;
+    ismWindPositions[i * 3 + 2] = startPos.z;
     
-    // Flow toward heliosphere (negative X direction)
+    // Flow velocity: uniform parallel flow toward heliosphere
     const speed = 0.015 + Math.random() * 0.01;
-    ismWindVelocities[i * 3 + 0] = -speed;
-    ismWindVelocities[i * 3 + 1] = (Math.random() - 0.5) * 0.002;
-    ismWindVelocities[i * 3 + 2] = (Math.random() - 0.5) * 0.002;
+    const velocity = ismFlowDirection.clone().multiplyScalar(-speed);
+    ismWindVelocities[i * 3 + 0] = velocity.x;
+    ismWindVelocities[i * 3 + 1] = velocity.y;
+    ismWindVelocities[i * 3 + 2] = velocity.z;
     
     // Interstellar medium color (blue-purple, cooler than solar wind)
     ismWindColors[i * 3 + 0] = 0.6;
@@ -476,9 +445,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   terminationShockGroup.name = 'terminationShock';
   scene.add(terminationShockGroup);
   
-  // Create termination shock surface (simplified visualization)
-  const tsGeometry = new THREE.SphereGeometry(HELIOSPHERIC_DISTANCES.TERMINATION_SHOCK_NOSE * 0.03, 32, 32);
-  tsGeometry.scale(0.7, 1.0, 1.0); // Compressed on nose side
+  // Create asymmetric termination shock using MHD model
+  const tsGeometry = heliosphereModel.generateParametricSurface(
+    'terminationShock',
+    currentJD,
+    48
+  );
+  tsGeometry.scale(0.03, 0.03, 0.03); // Scale AU to scene units
   const tsMaterial = new THREE.MeshBasicMaterial({
     color: 0xffaa44,
     transparent: true,
@@ -489,6 +462,224 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   const terminationShock = new THREE.Mesh(tsGeometry, tsMaterial);
   terminationShock.setRotationFromMatrix(apexBasis);
   terminationShockGroup.add(terminationShock);
+  
+  // ===== Bow Shock Visualization (Optional/Controversial) =====
+  const bowShockGroup = new THREE.Group();
+  bowShockGroup.name = 'bowShock';
+  bowShockGroup.visible = false; // Hidden by default (controversial feature)
+  scene.add(bowShockGroup);
+  
+  const bowShockGeometry = heliosphereModel.generateParametricSurface(
+    'bowShock',
+    currentJD,
+    32
+  );
+  
+  if (bowShockGeometry.attributes.position.count > 0) {
+    bowShockGeometry.scale(0.03, 0.03, 0.03);
+    const bowShockMaterial = new THREE.MeshBasicMaterial({
+      color: 0xff44ff,
+      transparent: true,
+      opacity: 0.1,
+      wireframe: true,
+      side: THREE.DoubleSide
+    });
+    const bowShock = new THREE.Mesh(bowShockGeometry, bowShockMaterial);
+    bowShock.setRotationFromMatrix(apexBasis);
+    bowShockGroup.add(bowShock);
+  }
+  
+  // ===== AU Distance Markers =====
+  const distanceMarkersGroup = new THREE.Group();
+  distanceMarkersGroup.name = 'distanceMarkers';
+  scene.add(distanceMarkersGroup);
+  
+  const markerDistances = [1, 5, 10, 20, 30, 50, 100, 150]; // AU
+  markerDistances.forEach(au => {
+    const radius = au * 0.03; // Scale to scene units
+    const geometry = new THREE.RingGeometry(radius - 0.05, radius + 0.05, 64);
+    const material = new THREE.MeshBasicMaterial({
+      color: 0x333333,
+      transparent: true,
+      opacity: 0.2,
+      side: THREE.DoubleSide
+    });
+    const ring = new THREE.Mesh(geometry, material);
+    ring.rotation.x = Math.PI / 2; // Lay flat in ecliptic plane
+    ring.name = `${au}AU`;
+    distanceMarkersGroup.add(ring);
+  });
+  
+  // ===== Solar Apex Direction Indicator =====
+  const solarApexGroup = new THREE.Group();
+  solarApexGroup.name = 'solarApex';
+  scene.add(solarApexGroup);
+  
+  // Solar apex: RA 18h 28m (277°), Dec +30°
+  // Convert to ecliptic coordinates (simplified)
+  const apexRA = 277 * Math.PI / 180;
+  const apexDec = 30 * Math.PI / 180;
+  const apexDirection = new THREE.Vector3(
+    Math.cos(apexDec) * Math.cos(apexRA),
+    Math.cos(apexDec) * Math.sin(apexRA),
+    Math.sin(apexDec)
+  ).normalize();
+  
+  const apexArrow = new THREE.ArrowHelper(
+    apexDirection,
+    new THREE.Vector3(0, 0, 0),
+    8,
+    0xff8800,
+    1.5,
+    0.8
+  );
+  apexArrow.line.material = new THREE.LineBasicMaterial({
+    color: 0xff8800,
+    transparent: true,
+    opacity: 0.6
+  });
+  apexArrow.cone.material = new THREE.MeshBasicMaterial({
+    color: 0xff8800,
+    transparent: true,
+    opacity: 0.6
+  });
+  solarApexGroup.add(apexArrow);
+  
+  // Label for solar apex
+  const apexLabel = new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      map: null, // Would need texture for label
+      transparent: true,
+      opacity: 0.8
+    })
+  );
+  apexLabel.position.copy(apexDirection.multiplyScalar(9));
+  solarApexGroup.add(apexLabel);
+  
+  // ===== Voyager Spacecraft =====
+  const voyagerGroup = new THREE.Group();
+  voyagerGroup.name = 'voyagers';
+  scene.add(voyagerGroup);
+  
+  // Voyager 1
+  const v1Geometry = new THREE.ConeGeometry(0.1, 0.3, 8);
+  const v1Material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+  const voyager1 = new THREE.Mesh(v1Geometry, v1Material);
+  voyager1.name = 'Voyager 1';
+  
+  // Voyager 2
+  const v2Geometry = new THREE.ConeGeometry(0.1, 0.3, 8);
+  const v2Material = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+  const voyager2 = new THREE.Mesh(v2Geometry, v2Material);
+  voyager2.name = 'Voyager 2';
+  
+  voyagerGroup.add(voyager1);
+  voyagerGroup.add(voyager2);
+  
+  // Voyager trajectories
+  const v1TrajGeometry = new THREE.BufferGeometry();
+  const v1TrajMaterial = new THREE.LineBasicMaterial({
+    color: 0x00ff00,
+    transparent: true,
+    opacity: 0.5
+  });
+  const v1Trajectory = new THREE.Line(v1TrajGeometry, v1TrajMaterial);
+  v1Trajectory.name = 'Voyager 1 Trajectory';
+  voyagerGroup.add(v1Trajectory);
+  
+  const v2TrajGeometry = new THREE.BufferGeometry();
+  const v2TrajMaterial = new THREE.LineBasicMaterial({
+    color: 0x00ffff,
+    transparent: true,
+    opacity: 0.5
+  });
+  const v2Trajectory = new THREE.Line(v2TrajGeometry, v2TrajMaterial);
+  v2Trajectory.name = 'Voyager 2 Trajectory';
+  voyagerGroup.add(v2Trajectory);
+  
+  // ===== Label System =====
+  const labelManager = new LabelManager(canvas, camera);
+  
+  // ===== Interstellar Objects =====
+  const interstellarObjectsGroup = new THREE.Group();
+  interstellarObjectsGroup.name = 'interstellarObjects';
+  scene.add(interstellarObjectsGroup);
+  
+  // 'Oumuamua
+  const oumuamuaGeometry = new THREE.BoxGeometry(0.2, 0.2, 2.0); // Elongated shape
+  const oumuamuaMaterial = new THREE.MeshBasicMaterial({ color: 0xff6600 });
+  const oumuamua = new THREE.Mesh(oumuamuaGeometry, oumuamuaMaterial);
+  oumuamua.name = "Oumuamua";
+  interstellarObjectsGroup.add(oumuamua);
+  
+  // Oumuamua trajectory
+  const oumuamuaTraj = generateOumuamuaTrajectory();
+  const oumuamuaTrajPoints: THREE.Vector3[] = [];
+  for (let i = 0; i < oumuamuaTraj.epochs.length; i++) {
+    const pos = oumuamuaTraj.values[i];
+    oumuamuaTrajPoints.push(pos.multiplyScalar(0.03));
+  }
+  const oumuamuaTrajGeometry = new THREE.BufferGeometry().setFromPoints(oumuamuaTrajPoints);
+  const oumuamuaTrajLine = new THREE.Line(
+    oumuamuaTrajGeometry,
+    new THREE.LineBasicMaterial({ color: 0xff6600, transparent: true, opacity: 0.3 })
+  );
+  interstellarObjectsGroup.add(oumuamuaTrajLine);
+  
+  // 2I/Borisov
+  const borisovGeometry = new THREE.SphereGeometry(0.15, 16, 16);
+  const borisovMaterial = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+  const borisov = new THREE.Mesh(borisovGeometry, borisovMaterial);
+  borisov.name = "2I/Borisov";
+  interstellarObjectsGroup.add(borisov);
+  
+  // Borisov trajectory
+  const borisovTraj = generateBorisovTrajectory();
+  const borisovTrajPoints: THREE.Vector3[] = [];
+  for (let i = 0; i < borisovTraj.epochs.length; i++) {
+    const pos = borisovTraj.values[i];
+    borisovTrajPoints.push(pos.multiplyScalar(0.03));
+  }
+  const borisovTrajGeometry = new THREE.BufferGeometry().setFromPoints(borisovTrajPoints);
+  const borisovTrajLine = new THREE.Line(
+    borisovTrajGeometry,
+    new THREE.LineBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.3 })
+  );
+  interstellarObjectsGroup.add(borisovTrajLine);
+  
+  // Andromeda Galaxy (very distant, shown as large fuzzy patch)
+  const andromedaGeometry = new THREE.SphereGeometry(2.0, 32, 32);
+  const andromedaMaterial = new THREE.MeshBasicMaterial({
+    color: 0x8888ff,
+    transparent: true,
+    opacity: 0.2
+  });
+  const andromeda = new THREE.Mesh(andromedaGeometry, andromedaMaterial);
+  andromeda.name = "Andromeda Galaxy";
+  interstellarObjectsGroup.add(andromeda);
+  
+  // ===== Constellations =====
+  const constellationsGroup = new THREE.Group();
+  constellationsGroup.name = 'constellations';
+  scene.add(constellationsGroup);
+  
+  // Add constellation stars to star catalog
+  const allStars = [...FAMOUS_STARS, ...CONSTELLATION_STARS];
+  
+  // Create constellation lines
+  COMPLETE_CONSTELLATIONS.forEach(constellation => {
+    const lineGeometry = generateConstellationLines(constellation, allStars);
+    if (lineGeometry.attributes.position.count > 0) {
+      const lineMaterial = new THREE.LineBasicMaterial({
+        color: 0x4444ff,
+        transparent: true,
+        opacity: 0.3
+      });
+      const constellationLine = new THREE.LineSegments(lineGeometry, lineMaterial);
+      constellationLine.name = constellation.name;
+      constellationsGroup.add(constellationLine);
+    }
+  });
 
   // Brighter lighting for better visibility
   scene.add(new THREE.AmbientLight(0xffffff, 0.3));  // Increased ambient
@@ -557,16 +748,17 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     return line;
   }
 
-  // Simple circular "not to scale" radii (in scene units)
+  // Realistic orbital distances in AU (semi-major axes)
   const PLANET_RADII = {
-    Mercury: 0.75,
-    Venus: 1.2,
-    Earth: 1.6,
-    Mars: 2.0,
-    Jupiter: 2.8,
-    Saturn: 3.4,
-    Uranus: 3.9,
-    Neptune: 4.4
+    Mercury: 0.387,
+    Venus: 0.723,
+    Earth: 1.0,
+    Mars: 1.524,
+    Jupiter: 5.203,
+    Saturn: 9.537,
+    Uranus: 19.191,
+    Neptune: 30.069,
+    Pluto: 39.482
   } as const;
 
   // Orbital periods in Earth years (for relative angular speeds)
@@ -578,7 +770,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     Jupiter: 11.86,
     Saturn: 29.46,
     Uranus: 84.01,
-    Neptune: 164.8
+    Neptune: 164.8,
+    Pluto: 247.92
   } as const;
 
   // Create planets + orbits with more realistic materials
@@ -590,11 +783,22 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   const earthMeshRef: { current: THREE.Mesh | null } = { current: null };
   
   Object.entries(PLANET_RADII).forEach(([name, R]) => {
-    makeOrbit(R);
+    // Scale AU to scene units (0.03 AU per scene unit based on heliosphere scale)
+    const sceneRadius = R * 0.03;
+    makeOrbit(sceneRadius);
     
     // More realistic planet colors and materials
     let color, emissive, metalness, roughness;
-    const size = name === "Jupiter" ? 0.12 : name === "Saturn" ? 0.11 : 0.08;
+    // Proportional sizes based on real planet radii (Earth = baseline)
+    const earthRadius = PLANET_PROPERTIES.Earth.radius;
+    const planetRadius = PLANET_PROPERTIES[name as keyof typeof PLANET_PROPERTIES]?.radius || earthRadius;
+    const relativeSize = planetRadius / earthRadius;
+    // Scale for visibility but maintain proportions (logarithmic scaling for gas giants)
+    const size = name === "Jupiter" ? 0.15 : 
+                 name === "Saturn" ? 0.13 : 
+                 name === "Uranus" || name === "Neptune" ? 0.10 :
+                 name === "Pluto" ? 0.05 :
+                 0.08 * Math.pow(relativeSize, 0.7);
     
     switch(name) {
       case "Mercury":
@@ -645,6 +849,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
         metalness = 0.0;
         roughness = 0.9;
         break;
+      case "Pluto":
+        color = 0xdaa520;
+        emissive = 0x000000;
+        metalness = 0.0;
+        roughness = 0.95;
+        break;
       default:
         color = 0x888888;
         emissive = 0x000000;
@@ -661,8 +871,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
         roughness 
       })
     );
-    mesh.userData.radius = R;
+    mesh.userData.radius = sceneRadius; // Store scene-scaled radius
     mesh.userData.period = PERIOD_Y[name as keyof typeof PERIOD_Y];
+    mesh.userData.auDistance = R; // Store actual AU distance
     mesh.rotation.z = ECLIPTIC_TILT;
     planetsGroup.add(mesh);
     planetMeshes[name] = mesh;
@@ -698,6 +909,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     heliosphere: true,
     helioglow: true,
     terminationShock: true,
+    bowShock: false,
     solarWind: true,
     interstellarWind: true,
     planets: true,
@@ -705,6 +917,12 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     moon: true,
     stars: true,
     famousStars: true,
+    voyagers: true,
+    distanceMarkers: true,
+    solarApex: true,
+    labels: true,
+    interstellarObjects: true,
+    constellations: false,
   };
   
   // ==== Animation state ====
@@ -719,8 +937,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   // Stars represent the galactic background streaming past us
   const VELOCITY_SCALE = 0.0003; // Scaling factor for screen units/frame
   const GALACTIC_MOTION = 230;   // km/s - Sun's orbital speed around Milky Way
-  const STAR_STREAM_SPEED = GALACTIC_MOTION * VELOCITY_SCALE; // Stars stream past (galaxy motion)
-  const SOLAR_DRIFT_SPEED = 0.001; // Minimal solar system drift within heliosphere (optional)
+  const STAR_STREAM_SPEED = 0; // Disabled to prevent drift accumulation
+  const SOLAR_DRIFT_SPEED = 0; // Disabled to prevent drift accumulation
 
   // Helpers
   const Z_AXIS = new THREE.Vector3(0, 0, 1);
@@ -781,8 +999,124 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
       currentYear = currentYear + (year - currentYear) * alpha;
     }
 
+    // Convert year to date for Voyager positioning
+    const currentDate = new Date(Math.floor(currentYear), 0, 1);
+    const jd = JulianDate.fromDate(currentDate);
+
     // Planet placement (planets orbit within heliosphere)
     placePlanets(currentYear);
+    
+    // Update Voyager positions
+    try {
+      const v1Data = VoyagerTrajectories.generateVoyager1Trajectory();
+      const v2Data = VoyagerTrajectories.generateVoyager2Trajectory();
+      
+      // Voyager 1 position
+      const v1Pos = v1Data.trajectory.position.interpolate(jd);
+      voyager1.position.copy(v1Pos.multiplyScalar(0.03)); // Scale AU to scene units
+      
+      // Voyager 2 position
+      const v2Pos = v2Data.trajectory.position.interpolate(jd);
+      voyager2.position.copy(v2Pos.multiplyScalar(0.03));
+      
+      // Update trajectories
+      const v1TrajPoints: THREE.Vector3[] = [];
+      const v2TrajPoints: THREE.Vector3[] = [];
+      
+      // Generate trajectory points from launch to current date
+      const launchJD = JulianDate.fromDate(v1Data.launch);
+      const steps = 200;
+      
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const trajJD = launchJD + t * (jd - launchJD);
+        
+        if (trajJD <= jd) {
+          const v1p = v1Data.trajectory.position.interpolate(trajJD);
+          v1TrajPoints.push(v1p.multiplyScalar(0.03));
+          
+          const v2p = v2Data.trajectory.position.interpolate(trajJD);
+          v2TrajPoints.push(v2p.multiplyScalar(0.03));
+        }
+      }
+      
+      v1TrajGeometry.setFromPoints(v1TrajPoints);
+      v2TrajGeometry.setFromPoints(v2TrajPoints);
+    } catch (error) {
+      console.warn('Could not update Voyager positions:', error);
+    }
+    
+    // Update interstellar object positions
+    const interstellarObjects = getAllInterstellarObjects();
+    // Positions are already in AU, scale to scene units
+    oumuamua.position.copy(interstellarObjects[0].currentPosition.clone().multiplyScalar(0.03));
+    borisov.position.copy(interstellarObjects[1].currentPosition.clone().multiplyScalar(0.03));
+    andromeda.position.copy(interstellarObjects[2].currentPosition.clone().multiplyScalar(0.03));
+    
+    // Update labels
+    if (visibility.labels) {
+      // Planet labels
+      Object.entries(planetMeshes).forEach(([name, mesh]) => {
+        const worldPos = new THREE.Vector3();
+        mesh.getWorldPosition(worldPos);
+        labelManager.createLabel(`planet-${name}`, {
+          text: name,
+          position: worldPos,
+          offset: new THREE.Vector3(0, 0.3, 0),
+          showDistance: true,
+          fontSize: 11
+        });
+      });
+      
+      // Voyager labels
+      const v1WorldPos = new THREE.Vector3();
+      voyager1.getWorldPosition(v1WorldPos);
+      labelManager.createLabel('voyager1', {
+        text: 'Voyager 1',
+        position: v1WorldPos,
+        offset: new THREE.Vector3(0, 0.3, 0),
+        color: '#00ff00',
+        fontSize: 10
+      });
+      
+      const v2WorldPos = new THREE.Vector3();
+      voyager2.getWorldPosition(v2WorldPos);
+      labelManager.createLabel('voyager2', {
+        text: 'Voyager 2',
+        position: v2WorldPos,
+        offset: new THREE.Vector3(0, 0.3, 0),
+        color: '#00ffff',
+        fontSize: 10
+      });
+      
+      // Boundary labels
+      labelManager.createLabel('termination-shock', {
+        text: 'Termination Shock',
+        position: new THREE.Vector3(90 * 0.03, 0, 0),
+        color: '#ffaa44',
+        fontSize: 10
+      });
+      
+      labelManager.createLabel('heliopause', {
+        text: 'Heliopause',
+        position: new THREE.Vector3(120 * 0.03, 0, 0),
+        color: '#1a2a4e',
+        fontSize: 10
+      });
+    } else {
+      // Remove all labels
+      Object.keys(planetMeshes).forEach(name => {
+        labelManager.removeLabel(`planet-${name}`);
+      });
+      labelManager.removeLabel('voyager1');
+      labelManager.removeLabel('voyager2');
+      labelManager.removeLabel('termination-shock');
+      labelManager.removeLabel('heliopause');
+    }
+    
+    // Update label manager
+    labelManager.update(camera);
+    labelManager.updateVisibility(camera, 0.5, 50);
 
     // Animate solar wind streams with accurate physics
     if (motionEnabled) {
@@ -797,14 +1131,25 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
       const shortTermVariation = Math.sin(currentYear * 0.5) * 0.3; // Shorter term variations
       const windPressure = 0.8 + solarCyclePhase * 0.4 + shortTermVariation; // Varies between 0.8 and 1.2
       
-      // Update heliosphere shape based on solar wind pressure
-      const newHelioGeometry = helio.createTeardropGeometry(windPressure);
-      helio.mesh.geometry.dispose();
-      helio.mesh.geometry = newHelioGeometry;
-      helio.glow.geometry.dispose();
-      const newGlowGeometry = newHelioGeometry.clone();
-      newGlowGeometry.scale(1.1, 1.1, 1.1);
-      helio.glow.geometry = newGlowGeometry;
+      // Update heliosphere shape based on solar wind pressure (regenerate MHD geometry periodically)
+      // Only regenerate occasionally to avoid performance issues
+      if (Math.random() < 0.01) { // 1% chance per frame
+        const newJD = JulianDate.fromDate(new Date(Math.floor(currentYear), 0, 1));
+        const newHPGeometry = heliosphereModel.generateParametricSurface(
+          'heliopause',
+          newJD,
+          64
+        );
+        newHPGeometry.scale(0.03, 0.03, 0.03);
+        
+        helio.mesh.geometry.dispose();
+        helio.mesh.geometry = newHPGeometry;
+        
+        const newGlowGeometry = newHPGeometry.clone();
+        newGlowGeometry.scale(1.1, 1.1, 1.1);
+        helio.glow.geometry.dispose();
+        helio.glow.geometry = newGlowGeometry;
+      }
       
       // Update heliosphere material opacity slightly based on pressure
       const helioMaterial = helio.mesh.material as THREE.MeshPhysicalMaterial;
@@ -905,31 +1250,63 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
         (stream.line.material as THREE.LineBasicMaterial).opacity = opacity;
       });
       
-      // Animate interstellar wind particles - faster flow
+      // Animate interstellar wind particles - with proper deflection around heliosphere
       const ismWindPos = ismWindGeo.attributes.position.array as Float32Array;
       const ismSpeedMultiplier = 1.0 + windPressure * 0.2; // ISM flow affected by solar wind pressure
+      
       for (let i = 0; i < ismWindCount; i++) {
         const idx = i * 3;
-        // Update position with dynamic speed
-        ismWindPos[idx + 0] += ismWindVelocities[idx + 0] * ismSpeedMultiplier;
-        ismWindPos[idx + 1] += ismWindVelocities[idx + 1] * ismSpeedMultiplier;
-        ismWindPos[idx + 2] += ismWindVelocities[idx + 2] * ismSpeedMultiplier;
+        const pos = new THREE.Vector3(
+          ismWindPos[idx],
+          ismWindPos[idx + 1],
+          ismWindPos[idx + 2]
+        );
+        
+        // Calculate distance from heliosphere center
+        const dist = pos.length();
+        const heliopauseDist = 120 * 0.03; // ~120 AU scaled
+        
+        // Update position with uniform flow
+        const vel = new THREE.Vector3(
+          ismWindVelocities[idx],
+          ismWindVelocities[idx + 1],
+          ismWindVelocities[idx + 2]
+        );
+        pos.add(vel.clone().multiplyScalar(ismSpeedMultiplier));
+        
+        // Deflect around heliosphere if close
+        if (dist < heliopauseDist * 1.5) {
+          const radialDir = pos.clone().normalize();
+          const dot = radialDir.dot(ismFlowDirection);
+          
+          // Deflection perpendicular to radial direction
+          if (dot > 0.1) {
+            const deflection = radialDir.clone()
+              .sub(ismFlowDirection.clone().multiplyScalar(dot))
+              .normalize();
+            
+            const deflectionStrength = Math.exp(-(dist - heliopauseDist) / (heliopauseDist * 0.2));
+            pos.add(deflection.multiplyScalar(deflectionStrength * 0.1));
+          }
+        }
         
         // Reset particles that have passed through heliosphere
-        if (ismWindPos[idx + 0] < -5) {
+        if (pos.x < -5 || dist > 15) {
           const spread = 8 + Math.random() * 4;
-          ismWindPos[idx + 0] = spread;
-          ismWindPos[idx + 1] = (Math.random() - 0.5) * 6;
-          ismWindPos[idx + 2] = (Math.random() - 0.5) * 6;
+          pos.set(spread, (Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6);
         }
+        
+        ismWindPos[idx] = pos.x;
+        ismWindPos[idx + 1] = pos.y;
+        ismWindPos[idx + 2] = pos.z;
       }
       ismWindGeo.attributes.position.needsUpdate = true;
       
-      // Stars stream past the fixed heliosphere (galaxy background moves)
-      starDriftX += STAR_STREAM_SPEED * direction;
+      // Drift disabled to prevent accumulation issues
+      // starDriftX += STAR_STREAM_SPEED * direction;
       
-      // Optional: minimal solar system drift within heliosphere (ISM interaction)
-      driftX += SOLAR_DRIFT_SPEED * direction;
+      // Solar system drift disabled to prevent accumulation
+      // driftX += SOLAR_DRIFT_SPEED * direction;
       
       // Optional auto-panning (disabled by default - user controls camera)
       if (autoPanning) {
@@ -961,6 +1338,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
+    labelManager.resize(w, h);
   }
 
   function dispose() {
@@ -968,6 +1346,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     renderer.dispose();
     starGeo.dispose();
     starMat.dispose();
+    labelManager.dispose();
   }
   
   // Toggle component visibility (astronomer controls)
@@ -983,6 +1362,9 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
         break;
       case 'terminationShock':
         terminationShockGroup.visible = visible;
+        break;
+      case 'bowShock':
+        bowShockGroup.visible = visible;
         break;
       case 'solarWind':
         solarWindGroup.visible = visible;
@@ -1004,6 +1386,24 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
         break;
       case 'famousStars':
         famousStarsGroup.visible = visible;
+        break;
+      case 'voyagers':
+        voyagerGroup.visible = visible;
+        break;
+      case 'distanceMarkers':
+        distanceMarkersGroup.visible = visible;
+        break;
+      case 'solarApex':
+        solarApexGroup.visible = visible;
+        break;
+      case 'labels':
+        labelManager.setVisible(visible);
+        break;
+      case 'interstellarObjects':
+        interstellarObjectsGroup.visible = visible;
+        break;
+      case 'constellations':
+        constellationsGroup.visible = visible;
         break;
     }
   }
