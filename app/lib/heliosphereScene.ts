@@ -719,8 +719,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   // Stars represent the galactic background streaming past us
   const VELOCITY_SCALE = 0.0003; // Scaling factor for screen units/frame
   const GALACTIC_MOTION = 230;   // km/s - Sun's orbital speed around Milky Way
-  const STAR_STREAM_SPEED = GALACTIC_MOTION * VELOCITY_SCALE; // Stars stream past (galaxy motion)
-  const SOLAR_DRIFT_SPEED = 0.001; // Minimal solar system drift within heliosphere (optional)
+  const STAR_STREAM_SPEED = 0; // Disabled to prevent drift accumulation
+  const SOLAR_DRIFT_SPEED = 0; // Disabled to prevent drift accumulation
 
   // Helpers
   const Z_AXIS = new THREE.Vector3(0, 0, 1);
@@ -919,11 +919,11 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
       }
       ismWindGeo.attributes.position.needsUpdate = true;
       
-      // Stars stream past the fixed heliosphere (galaxy background moves)
-      starDriftX += STAR_STREAM_SPEED * direction;
+      // Drift disabled to prevent accumulation issues
+      // starDriftX += STAR_STREAM_SPEED * direction;
       
-      // Optional: minimal solar system drift within heliosphere (ISM interaction)
-      driftX += SOLAR_DRIFT_SPEED * direction;
+      // Solar system drift disabled to prevent accumulation
+      // driftX += SOLAR_DRIFT_SPEED * direction;
       
       // Optional auto-panning (disabled by default - user controls camera)
       if (autoPanning) {
