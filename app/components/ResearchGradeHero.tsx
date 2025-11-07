@@ -40,7 +40,7 @@ const ResearchGradeHero = forwardRef<ResearchHeroRef>((props, ref) => {
       velocity: 17.0,
       lightTime: 22.6,
       position: { lon: 35.2, lat: 34.9 },
-      status: 'active' as const,
+      status: 'active' as 'active' | 'inactive',
       lastMilestone: 'Interstellar space since 2012'
     },
     voyager2: {
@@ -49,7 +49,7 @@ const ResearchGradeHero = forwardRef<ResearchHeroRef>((props, ref) => {
       velocity: 15.4,
       lightTime: 18.8,
       position: { lon: 311.0, lat: -32.5 },
-      status: 'active' as const,
+      status: 'active' as 'active' | 'inactive',
       lastMilestone: 'Interstellar space since 2018'
     }
   });
@@ -194,8 +194,9 @@ const ResearchGradeHero = forwardRef<ResearchHeroRef>((props, ref) => {
     const jd = JulianDate.fromDate(date);
     
     // Update Voyager positions
-    const v1Pos = dataService.getSpacecraftPosition('Voyager 1', jd);
-    const v2Pos = dataService.getSpacecraftPosition('Voyager 2', jd);
+    const dataStore = dataService.getDataStore();
+    const v1Pos = dataStore.getSpacecraftPosition('Voyager 1', jd);
+    const v2Pos = dataStore.getSpacecraftPosition('Voyager 2', jd);
     
     if (v1Pos && v2Pos) {
       setVoyagerData({
@@ -208,7 +209,7 @@ const ResearchGradeHero = forwardRef<ResearchHeroRef>((props, ref) => {
             lon: VoyagerTrajectories.VOYAGER_1.current.heliocentricLongitude,
             lat: VoyagerTrajectories.VOYAGER_1.current.heliocentricLatitude
           },
-          status: date.getFullYear() < 2025 ? 'active' : 'inactive',
+          status: (date.getFullYear() < 2025 ? 'active' : 'inactive') as 'active' | 'inactive',
           lastMilestone: v1Pos.distance > 121 ? 'Interstellar space since 2012' : 
                         v1Pos.distance > 94 ? 'Passed termination shock' : 'En route'
         },
@@ -221,7 +222,7 @@ const ResearchGradeHero = forwardRef<ResearchHeroRef>((props, ref) => {
             lon: VoyagerTrajectories.VOYAGER_2.current.heliocentricLongitude,
             lat: VoyagerTrajectories.VOYAGER_2.current.heliocentricLatitude
           },
-          status: date.getFullYear() < 2030 ? 'active' : 'inactive',
+          status: (date.getFullYear() < 2030 ? 'active' : 'inactive') as 'active' | 'inactive',
           lastMilestone: v2Pos.distance > 119 ? 'Interstellar space since 2018' : 
                         v2Pos.distance > 83 ? 'Passed termination shock' : 'En route'
         }
@@ -230,7 +231,13 @@ const ResearchGradeHero = forwardRef<ResearchHeroRef>((props, ref) => {
     
     // Update solar wind data
     const solarWind = dataService.getSolarWindConditions(date, 1);
-    setSolarWindData(solarWind);
+    setSolarWindData({
+      speed: solarWind.speed,
+      density: solarWind.density,
+      temperature: solarWind.temperature,
+      pressure: solarWind.pressure,
+      magneticField: solarWind.magneticField.length() // Convert Vector3 to magnitude
+    });
     
     // Update sunspot number
     const solarCycle = dataService.getDataStore().solarCycle;

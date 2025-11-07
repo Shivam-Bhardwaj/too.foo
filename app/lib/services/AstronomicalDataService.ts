@@ -9,7 +9,8 @@ import {
   JulianDate,
   NumberTimeSeries,
   Vector3TimeSeries,
-  SpacecraftTrajectoryData
+  SpacecraftTrajectoryData,
+  SpacecraftPosition
 } from '../data/AstronomicalDataStore';
 import { VoyagerTrajectories } from '../physics/SpacecraftTrajectories';
 import { PlanetaryEphemeris } from '../data/PlanetaryEphemeris';
@@ -125,7 +126,12 @@ export class AstronomicalDataService {
       solarWindSpeed: new NumberTimeSeries(epochs, windSpeeds),
       solarWindDensity: new NumberTimeSeries(epochs, windDensities),
       magneticField: new NumberTimeSeries(epochs, magneticFields),
-      coronalHoles: new NumberTimeSeries([], [])  // Simplified
+      coronalHoles: {  // Simplified implementation
+        epochs: [],
+        values: [],
+        interpolate: () => [],
+        getRange: () => ({ start: 0, end: 0 })
+      }
     };
   }
   

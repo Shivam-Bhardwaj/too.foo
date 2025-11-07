@@ -248,7 +248,7 @@ export async function createResearchGradeScene(canvas: HTMLCanvasElement): Promi
   
   // Sun
   const sunGeometry = new THREE.SphereGeometry(0.00465 * 100, 32, 32); // Scaled up for visibility
-  const sunMaterial = new THREE.MeshBasicMaterial({
+  const sunMaterial = new THREE.MeshStandardMaterial({
     color: 0xffff00,
     emissive: 0xffff00,
     emissiveIntensity: 2

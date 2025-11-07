@@ -188,9 +188,9 @@ export interface MHDModelParameters {
 export class AstronomicalDataStore {
   ephemeris: Map<string, TimeSeriesData<PlanetaryEphemeris>>;
   spacecraft: Map<string, SpacecraftTrajectoryData>;
-  heliosphere: MHDModelParameters;
+  heliosphere!: any;  // Will be initialized by service (HeliosphereModel)
   starCatalog: GaiaStarEntry[];
-  solarCycle: SolarActivityData;
+  solarCycle!: SolarActivityData;  // Will be initialized by service
   interstellar: ISMProperties;
   
   constructor() {
