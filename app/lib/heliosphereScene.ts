@@ -15,7 +15,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0b0f1a);
+  // Deep space black - no atmospheric scattering in interstellar space
+  scene.background = new THREE.Color(0x000000);
 
   const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 3000);
   camera.position.set(0, 2.2, 10);
@@ -29,7 +30,13 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   // Stars represent the Milky Way galaxy streaming past as the heliosphere moves through it
   // We're viewing from a distance: heliosphere is fixed, stars stream past
   // Distribution based on Gaia catalog statistics for solar neighborhood
-  const starMat = new THREE.PointsMaterial({ size: 0.015, transparent: true, opacity: 0.9 });
+  const starMat = new THREE.PointsMaterial({ 
+    size: 0.012,  // Sharper, more realistic star size
+    transparent: true, 
+    opacity: 1.0,
+    sizeAttenuation: true,  // Stars get smaller with distance
+    vertexColors: true
+  });
   const starGeo = new THREE.BufferGeometry();
   {
     const N = 8000; // Increased for richer field
@@ -87,31 +94,111 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     starGeo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
     starGeo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
   }
-  starMat.vertexColors = true; // Enable vertex colors
   const stars = new THREE.Points(starGeo, starMat);
   scene.add(stars);
 
-  // ===== Heliosphere (FIXED - reference frame) =====
+  // ===== Heliosphere (FIXED - comet-like teardrop shape) =====
   // The heliosphere is completely fixed in our view
   // We're observing it from a distance as it moves through the galaxy
   // Stars stream past to show our 230 km/s orbital motion around Milky Way center
+  // Shape: Compressed nose (ram pressure) + elongated tail (flow stretching)
   const helio = (() => {
-    const g = new THREE.SphereGeometry(3.6, 64, 64);
-    // Anisotropy: compressed nose toward +X (upwind), elongated tail
-    // Based on models: nose compressed by ram pressure, tail stretched by flow
-    g.scale(0.75, 1.05, 1.15);  // More realistic compression
+    // Create teardrop/comet shape geometry
+    const createTeardropGeometry = () => {
+      const segments = 64;
+      const rings = 48;
+      const radius = 3.6;
+      const noseCompression = 0.65;  // Nose compressed by ram pressure
+      const tailStretch = 2.2;        // Tail elongated by flow
+      
+      const geometry = new THREE.BufferGeometry();
+      const vertices: number[] = [];
+      const normals: number[] = [];
+      const uvs: number[] = [];
+      const indices: number[] = [];
+      
+      // Generate vertices in teardrop shape
+      for (let ring = 0; ring <= rings; ring++) {
+        const v = ring / rings; // 0 to 1
+        // Map v to teardrop profile: compressed at front (v=0), stretched at back (v=1)
+        const profileX = v < 0.5 
+          ? noseCompression * (1 - Math.pow(2 * v, 1.5))  // Compressed nose
+          : -tailStretch * Math.pow(2 * (v - 0.5), 0.7);  // Elongated tail
+        
+        const profileRadius = Math.sqrt(1 - Math.pow(v - 0.5, 2) * 4) * radius;
+        
+        for (let seg = 0; seg <= segments; seg++) {
+          const u = seg / segments;
+          const theta = u * Math.PI * 2;
+          
+          const x = profileX;
+          const y = Math.cos(theta) * profileRadius;
+          const z = Math.sin(theta) * profileRadius;
+          
+          vertices.push(x, y, z);
+          
+          // Calculate normals for smooth shading
+          const normal = new THREE.Vector3(x - profileX, y, z).normalize();
+          normals.push(normal.x, normal.y, normal.z);
+          
+          uvs.push(u, v);
+        }
+      }
+      
+      // Generate indices for faces
+      for (let ring = 0; ring < rings; ring++) {
+        for (let seg = 0; seg < segments; seg++) {
+          const a = ring * (segments + 1) + seg;
+          const b = ring * (segments + 1) + seg + 1;
+          const c = (ring + 1) * (segments + 1) + seg;
+          const d = (ring + 1) * (segments + 1) + seg + 1;
+          
+          indices.push(a, c, b);
+          indices.push(b, c, d);
+        }
+      }
+      
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+      geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+      geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+      geometry.setIndex(indices);
+      geometry.computeVertexNormals();
+      
+      return geometry;
+    };
+    
+    const g = createTeardropGeometry();
+    
+    // Realistic heliosphere material - subtle glow from helioglow effect
     const m = new THREE.MeshPhysicalMaterial({
-      color: new THREE.Color(0x10273b),
-      emissive: new THREE.Color(0x091724),
-      transmission: 1,
-      thickness: 0.3,
-      roughness: 0.95,
+      color: new THREE.Color(0x0a1a2e),  // Very dark blue-grey
+      emissive: new THREE.Color(0x040810), // Subtle helioglow
+      transmission: 0.85,  // Less transparent for more presence
+      thickness: 0.4,
+      roughness: 0.98,
+      metalness: 0.0,
       transparent: true,
-      opacity: 0.40
+      opacity: 0.25,  // More subtle
+      side: THREE.DoubleSide
     });
+    
     const mesh = new THREE.Mesh(g, m);
-    mesh.setRotationFromMatrix(apexBasis); // nose → +X
+    mesh.setRotationFromMatrix(apexBasis); // nose → +X (upwind direction)
     scene.add(mesh);
+    
+    // Add subtle helioglow effect (faint emission from UV interactions)
+    const glowGeometry = g.clone();
+    glowGeometry.scale(1.15, 1.15, 1.15); // Slightly larger
+    const glowMaterial = new THREE.MeshBasicMaterial({
+      color: new THREE.Color(0x1a2a4a),
+      transparent: true,
+      opacity: 0.08,
+      side: THREE.DoubleSide
+    });
+    const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+    glow.setRotationFromMatrix(apexBasis);
+    scene.add(glow);
+    
     return mesh;
   })();
 
@@ -126,11 +213,16 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   );
   sol.add(sun);
 
-  // Ambient + key light for planets
-  scene.add(new THREE.AmbientLight(0xffffff, 0.25));
-  const key = new THREE.DirectionalLight(0xffffff, 0.6);
-  key.position.set(2, 2, 2);
-  scene.add(key);
+  // Subtle lighting for deep space - minimal ambient, directional from Sun
+  scene.add(new THREE.AmbientLight(0xffffff, 0.1));  // Very subtle ambient
+  const sunLight = new THREE.DirectionalLight(0xfff2cc, 0.4);  // Warm sunlight
+  sunLight.position.set(2, 1, 2);
+  scene.add(sunLight);
+  
+  // Add subtle fill light for heliosphere visibility
+  const fillLight = new THREE.DirectionalLight(0x4a5a7a, 0.15);
+  fillLight.position.set(-2, -1, -2);
+  scene.add(fillLight);
   
   // ===== Reference Frame Indicators (optional scientific markers) =====
   // These show the various reference frames for educational purposes

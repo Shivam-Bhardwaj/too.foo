@@ -21,10 +21,10 @@ export const metadata: Metadata = {
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-cosmic-indigo text-white relative overflow-hidden">
-      {/* Radial vignette overlay */}
+    <main className="min-h-screen bg-black text-white relative overflow-hidden">
+      {/* Subtle radial vignette - very minimal for deep space */}
       <div className="absolute inset-0 pointer-events-none z-0" style={{
-        background: 'radial-gradient(circle at center, transparent 0%, rgba(11, 15, 26, 0.4) 70%, rgba(11, 15, 26, 0.8) 100%)',
+        background: 'radial-gradient(circle at center, transparent 0%, rgba(0, 0, 0, 0.2) 80%, rgba(0, 0, 0, 0.4) 100%)',
       }} />
 
       {/* Hero section */}
