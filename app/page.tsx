@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import ClientWrapper from './components/ClientWrapper';
-import MissionMetaHeader from './components/MissionMetaHeader';
 import TechStackFooter from './components/TechStackFooter';
 
 export const metadata: Metadata = {
@@ -30,11 +29,9 @@ export default function Home() {
         }}
       />
 
-      <MissionMetaHeader />
-
       <section
         className="relative flex-1"
-        style={{ minHeight: 'calc(var(--viewport-height, 100vh) - var(--mission-meta-height, 0px))' }}
+        style={{ minHeight: 'var(--viewport-height, 100vh)' }}
       >
         <ClientWrapper />
 

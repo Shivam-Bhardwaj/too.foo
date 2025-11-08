@@ -8,6 +8,7 @@ import LayerControl from './LayerControl';
 export default function ClientWrapper() {
   const heroRef = useRef<HeroRef>(null);
   const [currentYear, setCurrentYear] = useState(2024.0);
+  const [utcTime, setUtcTime] = useState('');
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const updateViewportHeight = () => {
@@ -26,6 +27,14 @@ export default function ClientWrapper() {
       window.removeEventListener('orientationchange', handleOrientation);
       vv?.removeEventListener('resize', updateViewportHeight);
     };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const updateUtc = () => setUtcTime(new Date().toUTCString());
+    updateUtc();
+    const id = window.setInterval(updateUtc, 1000);
+    return () => window.clearInterval(id);
   }, []);
 
   const handleTimeChange = useCallback((time: number) => {
@@ -72,28 +81,36 @@ export default function ClientWrapper() {
       </div>
       
       {/* Header Section - Controls and Menu */}
-      <header
-        className="fixed inset-x-0 z-30 pointer-events-none"
-        style={{ top: 'var(--mission-meta-height, 0px)' }}
-      >
+      <header className="fixed inset-x-0 top-0 z-30 pointer-events-none">
         <div
           className="pointer-events-auto px-4 sm:px-6"
           style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}
         >
           <div className="max-w-5xl mx-auto space-y-3 sm:space-y-4">
-            <div className="flex items-center justify-between sm:justify-end">
-              <div className="text-[0.65rem] uppercase tracking-[0.3em] text-white/60 sm:hidden">
-                Layers
+            <div className="bg-black/60 backdrop-blur border border-white/10 rounded-3xl px-4 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-[0.6rem] uppercase tracking-[0.4em] text-white/50">too.foo mission</p>
+                <p className="text-lg text-white">Solar Memory Navigation Console</p>
               </div>
-              <LayerControl heroRef={heroRef} />
+              <div className="text-sm font-mono text-emerald-300/80">
+                UTC · {utcTime}
+              </div>
             </div>
-            <Controls
-              heroRef={heroRef}
-              onTimeChange={handleTimeChange}
-              onDirectionChange={handleDirectionChange}
-              onMotionChange={handleMotionChange}
-              onPauseChange={handlePauseChange}
-            />
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <div className="text-[0.65rem] uppercase tracking-[0.3em] text-white/60">
+                  Layers
+                </div>
+                <LayerControl heroRef={heroRef} />
+              </div>
+              <Controls
+                heroRef={heroRef}
+                onTimeChange={handleTimeChange}
+                onDirectionChange={handleDirectionChange}
+                onMotionChange={handleMotionChange}
+                onPauseChange={handlePauseChange}
+              />
+            </div>
           </div>
         </div>
       </header>

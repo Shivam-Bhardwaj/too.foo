@@ -4,7 +4,6 @@
 
 :root {
   --viewport-height: 100vh;
-  --mission-meta-height: 0px;
 }
 
 @supports (height: 100dvh) {
