@@ -12,13 +12,6 @@ const MISSION_STATS = [
   { label: 'Medium', value: 'Heliopause' },
 ];
 
-const MISSION_STATS = [
-  { label: 'Phase', value: 'Prelaunch' },
-  { label: 'Window', value: '1977 → 2077' },
-  { label: 'Signal', value: 'Voyager / IBEX' },
-  { label: 'Medium', value: 'Heliopause' },
-];
-
 export default function ClientWrapper() {
   const heroRef = useRef<HeroRef>(null);
   const [currentYear, setCurrentYear] = useState(2024.0);
