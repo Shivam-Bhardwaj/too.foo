@@ -8,6 +8,13 @@ import LayerControl from './LayerControl';
 const MISSION_STATS = [
   { label: 'Phase', value: 'Prelaunch' },
   { label: 'Window', value: '1977 → 2077' },
+  { label: 'Signal', value: 'Voyager + IBEX' },
+  { label: 'Medium', value: 'Heliopause' },
+];
+
+const MISSION_STATS = [
+  { label: 'Phase', value: 'Prelaunch' },
+  { label: 'Window', value: '1977 → 2077' },
   { label: 'Signal', value: 'Voyager / IBEX' },
   { label: 'Medium', value: 'Heliopause' },
 ];
@@ -87,54 +94,56 @@ export default function ClientWrapper() {
         <Hero ref={heroRef} />
       </div>
       
-      {/* Header Section - Controls and Menu */}
-      <header className="fixed inset-x-0 top-0 z-30 pointer-events-none">
+      {/* Header Section - constrained to 10% of viewport */}
+      <header
+        className="fixed inset-x-0 top-0 z-30 pointer-events-none"
+        style={{ height: 'calc(var(--viewport-height, 100vh) * var(--header-ratio, 0.1))' }}
+      >
         <div
-          className="pointer-events-auto px-4 sm:px-6"
-          style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}
+          className="pointer-events-auto h-full px-4 sm:px-6"
+          style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)' }}
         >
-          <div className="max-w-6xl mx-auto space-y-4">
-            <div className="grid gap-4 lg:grid-cols-[1.4fr,0.8fr] bg-black/65 backdrop-blur border border-white/10 rounded-3xl px-5 py-4">
-              <div className="space-y-3">
+          <div className="max-w-6xl mx-auto h-full flex flex-col gap-2">
+            <div className="flex flex-col gap-3 rounded-3xl border border-white/10 bg-black/65 backdrop-blur px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="space-y-1">
                 <p className="text-[0.55rem] uppercase tracking-[0.45em] text-emerald-300/70">
                   too.foo mission
                 </p>
-                <div className="space-y-1">
-                  <p className="text-2xl sm:text-3xl font-light">Solar Memory Console</p>
-                  <p className="text-sm text-white/70 max-w-2xl">
-                    Heliosphere navigation fused with Voyager telemetry, IBEX data, and MHD simulations.
-                  </p>
-                </div>
-                <div className="w-fit rounded-full border border-white/20 px-3 py-1 text-sm font-mono text-emerald-200/90">
-                  UTC · {utcTime}
-                </div>
+                <p className="text-xl sm:text-2xl font-light">Solar Memory Console</p>
+                <p className="text-xs text-white/70 max-w-2xl">
+                  Voyager telemetry · IBEX maps · Magnetohydrodynamic inference
+                </p>
               </div>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="grid grid-cols-2 gap-2 text-xs text-white/80 sm:grid-cols-4">
                 {MISSION_STATS.map((stat) => (
                   <div key={stat.label} className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
-                    <p className="text-[0.5rem] uppercase tracking-[0.35em] text-white/50">
+                    <p className="text-[0.45rem] uppercase tracking-[0.35em] text-white/50">
                       {stat.label}
                     </p>
-                    <p className="text-sm font-mono">{stat.value}</p>
+                    <p className="font-mono">{stat.value}</p>
                   </div>
                 ))}
               </div>
-            </div>
-
-            <div className="bg-black/55 backdrop-blur border border-white/10 rounded-3xl p-4 space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="text-[0.6rem] uppercase tracking-[0.4em] text-white/50">
-                  Visualization Controls
-                </div>
-                <LayerControl heroRef={heroRef} />
+              <div className="text-xs font-mono text-emerald-200/80 lg:text-right">
+                UTC · {utcTime}
               </div>
-              <Controls
-                heroRef={heroRef}
-                onTimeChange={handleTimeChange}
-                onDirectionChange={handleDirectionChange}
-                onMotionChange={handleMotionChange}
-                onPauseChange={handlePauseChange}
-              />
+            </div>
+            <div className="flex-1 min-h-0">
+              <div className="h-full overflow-y-auto rounded-3xl border border-white/10 bg-black/55 backdrop-blur p-3 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="text-[0.55rem] uppercase tracking-[0.4em] text-white/50">
+                    Visualization Controls
+                  </div>
+                  <LayerControl heroRef={heroRef} />
+                </div>
+                <Controls
+                  heroRef={heroRef}
+                  onTimeChange={handleTimeChange}
+                  onDirectionChange={handleDirectionChange}
+                  onMotionChange={handleMotionChange}
+                  onPauseChange={handlePauseChange}
+                />
+              </div>
             </div>
           </div>
         </div>

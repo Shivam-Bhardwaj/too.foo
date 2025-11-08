@@ -4,6 +4,8 @@
 
 :root {
   --viewport-height: 100vh;
+  --header-ratio: 0.1;
+  --footer-ratio: 0.05;
 }
 
 @supports (height: 100dvh) {
