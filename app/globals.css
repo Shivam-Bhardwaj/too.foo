@@ -2,10 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --viewport-height: 100vh;
+  --header-ratio: 0.1;
+  --footer-ratio: 0.05;
+}
+
+@supports (height: 100dvh) {
+  :root {
+    --viewport-height: 100dvh;
+  }
+}
+
 @layer base {
   body {
     @apply bg-cosmic-indigo text-white antialiased;
+    min-height: var(--viewport-height);
   }
+}
+
+canvas {
+  display: block;
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 @layer utilities {
@@ -72,14 +91,10 @@ input[type="range"]:focus::-moz-range-thumb {
   outline-offset: 2px;
 }
 
-/* Hide centered date displays that overlap the simulation */
-/* Target elements positioned in the center that contain date-like text */
-div.fixed.top-1\/2.left-1\/2.transform {
-  display: none !important;
+[data-speed-scroll] {
+  scrollbar-width: none;
 }
 
-/* Also target any div with transform translate that's centered */
-div[class*="top-1/2"][class*="left-1/2"][class*="transform"] {
-  display: none !important;
+[data-speed-scroll]::-webkit-scrollbar {
+  display: none;
 }
-

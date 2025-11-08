@@ -49,16 +49,54 @@ export type SceneAPI = {
   getVisibility: () => ComponentVisibility;
 };
 
-export function createScene(canvas: HTMLCanvasElement): SceneAPI {
+export type SceneOptions = {
+  initialViewport?: {
+    width: number;
+    height: number;
+    devicePixelRatio: number;
+  };
+};
+
+export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): SceneAPI {
+  const initialViewport = options?.initialViewport;
+  const fallbackWidth = Math.max(
+    initialViewport?.width ??
+      (typeof window !== 'undefined' ? window.innerWidth : canvas.clientWidth) ??
+      1,
+    1
+  );
+  const fallbackHeight = Math.max(
+    initialViewport?.height ??
+      (typeof window !== 'undefined' ? window.innerHeight : canvas.clientHeight) ??
+      1,
+    1
+  );
+  const initialDevicePixelRatio =
+    initialViewport?.devicePixelRatio ??
+    (typeof window !== 'undefined' ? window.devicePixelRatio ?? 1 : 1);
+  const initialAspect = fallbackWidth / fallbackHeight;
+  const isMobileViewport = initialViewport
+    ? initialViewport.width <= 768
+    : (typeof window !== 'undefined' ? window.innerWidth <= 768 : false);
+
   // Renderer / Scene / Camera
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  const renderer = new THREE.WebGLRenderer({
+    canvas,
+    antialias: !isMobileViewport,
+    powerPreference: "high-performance",
+  });
+  const pixelCap = isMobileViewport ? 1.6 : 2.2;
+  renderer.setPixelRatio(Math.min(initialDevicePixelRatio, pixelCap));
+  renderer.setSize(fallbackWidth, fallbackHeight, false);
+  renderer.domElement.style.transform = 'translateZ(0)';
+  renderer.domElement.style.willChange = 'transform';
   const scene = new THREE.Scene();
   // Deep space black - no atmospheric scattering in interstellar space
   scene.background = new THREE.Color(0x000000);
 
   const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 3000);
-  camera.position.set(0, 2.2, 10);
+  const defaultCameraPosition = new THREE.Vector3(0, 2.2, 10);
+  camera.position.copy(defaultCameraPosition);
   camera.lookAt(0, 0, 0);
   
   // Interactive camera controls
@@ -71,6 +109,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   controls.maxDistance = 50; // Don't zoom too far
   controls.target.set(0, 0, 0); // Look at heliosphere center
   controls.update();
+  adjustCameraForViewport(initialAspect);
   
   // Prevent OrbitControls from capturing clicks on UI elements
   // Check if click target is a UI element before allowing controls to handle it
@@ -1022,7 +1061,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
   // ==== Component visibility state (astronomer controls) ====
   const visibility: ComponentVisibility = {
     heliosphere: true,
-    helioglow: true,
+    helioglow: false,
     terminationShock: true,
     bowShock: false,
     solarWind: true,
@@ -1033,12 +1072,14 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     stars: true,
     famousStars: true,
     voyagers: true,
-    distanceMarkers: true,
-    solarApex: true,
+    distanceMarkers: false,
+    solarApex: false,
     labels: true,
-    interstellarObjects: true,
+    interstellarObjects: false,
     constellations: false,
   };
+  helio.mesh.visible = visibility.heliosphere;
+  helio.glow.visible = visibility.helioglow;
   
   // ==== Animation state ====
   let currentYear = 2024.0;   // Start at current year (can be adjusted)
@@ -1540,11 +1581,38 @@ export function createScene(canvas: HTMLCanvasElement): SceneAPI {
     renderer.render(scene, camera);
   }
 
-  function resize(w: number, h: number) {
-    renderer.setSize(w, h, false);
-    camera.aspect = w / h;
+  function adjustCameraForViewport(aspect: number) {
+    const portraitFactor = THREE.MathUtils.clamp(1 - aspect, 0, 1);
+    camera.fov = THREE.MathUtils.lerp(55, 68, portraitFactor);
+    camera.position.set(
+      defaultCameraPosition.x,
+      defaultCameraPosition.y + portraitFactor * 0.8,
+      defaultCameraPosition.z + portraitFactor * 4.5
+    );
     camera.updateProjectionMatrix();
-    labelManager.resize(w, h);
+    controls.minDistance = 3 + portraitFactor * 0.5;
+    controls.maxDistance = 50 + portraitFactor * 5;
+  }
+
+  function resolvePixelRatio(aspect: number) {
+    const runtimeDevicePixelRatio =
+      typeof window !== 'undefined' ? window.devicePixelRatio ?? initialDevicePixelRatio : initialDevicePixelRatio;
+    const cap = aspect < 1 ? 1.6 : 2.2;
+    return Math.min(runtimeDevicePixelRatio, cap);
+  }
+
+  function resize(w: number, h: number) {
+    const safeWidth = Math.max(1, w);
+    const safeHeight = Math.max(1, h);
+    renderer.setSize(safeWidth, safeHeight, false);
+    const aspect = safeWidth / safeHeight;
+    camera.aspect = aspect;
+    adjustCameraForViewport(aspect);
+    const targetPixelRatio = resolvePixelRatio(aspect);
+    if (Math.abs(renderer.getPixelRatio() - targetPixelRatio) > 0.01) {
+      renderer.setPixelRatio(targetPixelRatio);
+    }
+    labelManager.resize(safeWidth, safeHeight);
   }
 
   function dispose() {
