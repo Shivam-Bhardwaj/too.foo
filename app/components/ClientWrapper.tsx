@@ -5,6 +5,13 @@ import Hero, { HeroRef } from './Hero';
 import Controls from './Controls';
 import LayerControl from './LayerControl';
 
+const MISSION_STATS = [
+  { label: 'Phase', value: 'Prelaunch' },
+  { label: 'Window', value: '1977 → 2077' },
+  { label: 'Signal', value: 'Voyager / IBEX' },
+  { label: 'Medium', value: 'Heliopause' },
+];
+
 export default function ClientWrapper() {
   const heroRef = useRef<HeroRef>(null);
   const [currentYear, setCurrentYear] = useState(2024.0);
@@ -86,20 +93,38 @@ export default function ClientWrapper() {
           className="pointer-events-auto px-4 sm:px-6"
           style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}
         >
-          <div className="max-w-5xl mx-auto space-y-3 sm:space-y-4">
-            <div className="bg-black/60 backdrop-blur border border-white/10 rounded-3xl px-4 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-[0.6rem] uppercase tracking-[0.4em] text-white/50">too.foo mission</p>
-                <p className="text-lg text-white">Solar Memory Navigation Console</p>
+          <div className="max-w-6xl mx-auto space-y-4">
+            <div className="grid gap-4 lg:grid-cols-[1.4fr,0.8fr] bg-black/65 backdrop-blur border border-white/10 rounded-3xl px-5 py-4">
+              <div className="space-y-3">
+                <p className="text-[0.55rem] uppercase tracking-[0.45em] text-emerald-300/70">
+                  too.foo mission
+                </p>
+                <div className="space-y-1">
+                  <p className="text-2xl sm:text-3xl font-light">Solar Memory Console</p>
+                  <p className="text-sm text-white/70 max-w-2xl">
+                    Heliosphere navigation fused with Voyager telemetry, IBEX data, and MHD simulations.
+                  </p>
+                </div>
+                <div className="w-fit rounded-full border border-white/20 px-3 py-1 text-sm font-mono text-emerald-200/90">
+                  UTC · {utcTime}
+                </div>
               </div>
-              <div className="text-sm font-mono text-emerald-300/80">
-                UTC · {utcTime}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {MISSION_STATS.map((stat) => (
+                  <div key={stat.label} className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
+                    <p className="text-[0.5rem] uppercase tracking-[0.35em] text-white/50">
+                      {stat.label}
+                    </p>
+                    <p className="text-sm font-mono">{stat.value}</p>
+                  </div>
+                ))}
               </div>
             </div>
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <div className="text-[0.65rem] uppercase tracking-[0.3em] text-white/60">
-                  Layers
+
+            <div className="bg-black/55 backdrop-blur border border-white/10 rounded-3xl p-4 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="text-[0.6rem] uppercase tracking-[0.4em] text-white/50">
+                  Visualization Controls
                 </div>
                 <LayerControl heroRef={heroRef} />
               </div>
@@ -116,7 +141,7 @@ export default function ClientWrapper() {
       </header>
 
       {/* Date Display - responsive placement */}
-      <div className="fixed inset-x-4 top-28 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:w-auto sm:-translate-x-1/2 sm:-translate-y-1/2 z-20 pointer-events-none">
+      <div className="fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom,0px)+6rem)] sm:inset-auto sm:left-1/2 sm:bottom-[calc(env(safe-area-inset-bottom,0px)+6rem)] sm:w-auto sm:-translate-x-1/2 z-20 pointer-events-none">
         <div className="bg-black/55 backdrop-blur-md border border-white/10 rounded-2xl px-4 py-3 sm:bg-transparent sm:border-none sm:backdrop-blur-0 sm:px-0 sm:py-0 sm:text-center">
           <p className="text-[0.65rem] uppercase tracking-[0.35em] text-white/60 mb-1 sm:mb-2 text-left sm:text-center">
             Solar Date
