@@ -90,45 +90,46 @@ export default function ClientWrapper() {
       {/* Header Section */}
       <header
         className="fixed inset-x-0 top-0 z-30 pointer-events-none"
-        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)' }}
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.25rem)' }}
       >
-        <div className="px-4 sm:px-6">
+        <div className="px-2 sm:px-4 lg:px-6">
           <div className="max-w-6xl mx-auto">
-            {/* Combined Title and Metadata Panel */}
-            <div className="rounded-3xl border border-white/10 bg-black/65 backdrop-blur px-4 py-3 pointer-events-auto">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                {/* Title */}
-                <div className="space-y-1">
-                  <p className="text-[0.55rem] uppercase tracking-[0.45em] text-emerald-300/70">
-                    too.foo mission
-                  </p>
-                  <p className="text-xl sm:text-2xl font-light">Solar Memory Console</p>
-                </div>
-                
-                {/* Metadata */}
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-                  <div className="grid grid-cols-2 gap-2 text-xs text-white/80 sm:grid-cols-4">
-                    {MISSION_STATS.map((stat) => (
-                      <div key={stat.label} className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
-                        <p className="text-[0.45rem] uppercase tracking-[0.35em] text-white/50">
-                          {stat.label}
-                        </p>
-                        <p className="font-mono text-xs">{stat.value}</p>
-                      </div>
-                    ))}
+            {/* Combined Header Panel */}
+            <div className="rounded-2xl sm:rounded-3xl border border-white/10 bg-black/65 backdrop-blur px-2 py-2 sm:px-4 sm:py-3 pointer-events-auto">
+              {/* Title and Metadata Row */}
+              <div className="flex flex-col gap-2 sm:gap-3 mb-2 sm:mb-3">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  {/* Title */}
+                  <div className="space-y-0.5 sm:space-y-1">
+                    <p className="text-[0.5rem] sm:text-[0.55rem] uppercase tracking-[0.45em] text-emerald-300/70">
+                      too.foo mission
+                    </p>
+                    <p className="text-lg sm:text-xl lg:text-2xl font-light leading-tight">Solar Memory Console</p>
                   </div>
-                  <div className="text-xs font-mono text-emerald-200/80 sm:text-right">
-                    UTC · {utcTime}
+                  
+                  {/* Metadata - Compact on mobile */}
+                  <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2 lg:gap-3">
+                    <div className="grid grid-cols-4 gap-1 sm:gap-2 text-xs text-white/80">
+                      {MISSION_STATS.map((stat) => (
+                        <div key={stat.label} className="rounded-xl sm:rounded-2xl border border-white/10 bg-white/5 px-1.5 py-1 sm:px-3 sm:py-2">
+                          <p className="text-[0.4rem] sm:text-[0.45rem] uppercase tracking-[0.35em] text-white/50 leading-tight">
+                            {stat.label}
+                          </p>
+                          <p className="font-mono text-[0.65rem] sm:text-xs leading-tight">{stat.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="text-[0.65rem] sm:text-xs font-mono text-emerald-200/80 sm:text-right">
+                      UTC · {utcTime}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-            
-            {/* Controls Section - Below header */}
-            <div className="mt-2 pointer-events-auto">
-              <div className="rounded-3xl border border-white/10 bg-black/55 backdrop-blur p-3 space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="text-[0.55rem] uppercase tracking-[0.4em] text-white/50">
+              
+              {/* Controls Section - Integrated */}
+              <div className="border-t border-white/10 pt-2 sm:pt-3 space-y-2 sm:space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-[0.5rem] sm:text-[0.55rem] uppercase tracking-[0.4em] text-white/50">
                     Visualization Controls
                   </div>
                   <LayerControl heroRef={heroRef} />
