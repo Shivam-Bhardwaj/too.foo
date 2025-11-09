@@ -87,48 +87,46 @@ export default function ClientWrapper() {
         <Hero ref={heroRef} />
       </div>
       
-      {/* Header Section - constrained to 10% of viewport */}
+      {/* Header Section */}
       <header
         className="fixed inset-x-0 top-0 z-30 pointer-events-none"
-        style={{ height: 'calc(var(--viewport-height, 100vh) * var(--header-ratio, 0.1))' }}
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)' }}
       >
-        <div
-          className="pointer-events-auto h-full px-4 sm:px-6"
-          style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)' }}
-        >
-          <div className="max-w-6xl mx-auto h-full flex flex-col gap-2">
-            {/* Title Section */}
-            <div className="rounded-3xl border border-white/10 bg-black/65 backdrop-blur px-4 py-3">
-              <div className="space-y-1">
-                <p className="text-[0.55rem] uppercase tracking-[0.45em] text-emerald-300/70">
-                  too.foo mission
-                </p>
-                <p className="text-xl sm:text-2xl font-light">Solar Memory Console</p>
-              </div>
-            </div>
-            
-            {/* Metadata Section */}
-            <div className="rounded-3xl border border-white/10 bg-black/65 backdrop-blur px-4 py-3">
+        <div className="px-4 sm:px-6">
+          <div className="max-w-6xl mx-auto">
+            {/* Combined Title and Metadata Panel */}
+            <div className="rounded-3xl border border-white/10 bg-black/65 backdrop-blur px-4 py-3 pointer-events-auto">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <div className="grid grid-cols-2 gap-2 text-xs text-white/80 sm:grid-cols-4">
-                  {MISSION_STATS.map((stat) => (
-                    <div key={stat.label} className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
-                      <p className="text-[0.45rem] uppercase tracking-[0.35em] text-white/50">
-                        {stat.label}
-                      </p>
-                      <p className="font-mono">{stat.value}</p>
-                    </div>
-                  ))}
+                {/* Title */}
+                <div className="space-y-1">
+                  <p className="text-[0.55rem] uppercase tracking-[0.45em] text-emerald-300/70">
+                    too.foo mission
+                  </p>
+                  <p className="text-xl sm:text-2xl font-light">Solar Memory Console</p>
                 </div>
-                <div className="text-xs font-mono text-emerald-200/80 lg:text-right">
-                  UTC · {utcTime}
+                
+                {/* Metadata */}
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                  <div className="grid grid-cols-2 gap-2 text-xs text-white/80 sm:grid-cols-4">
+                    {MISSION_STATS.map((stat) => (
+                      <div key={stat.label} className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
+                        <p className="text-[0.45rem] uppercase tracking-[0.35em] text-white/50">
+                          {stat.label}
+                        </p>
+                        <p className="font-mono text-xs">{stat.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="text-xs font-mono text-emerald-200/80 sm:text-right">
+                    UTC · {utcTime}
+                  </div>
                 </div>
               </div>
             </div>
             
-            {/* Controls Section */}
-            <div className="flex-1 min-h-0">
-              <div className="h-full overflow-y-auto rounded-3xl border border-white/10 bg-black/55 backdrop-blur p-3 space-y-3">
+            {/* Controls Section - Below header */}
+            <div className="mt-2 pointer-events-auto">
+              <div className="rounded-3xl border border-white/10 bg-black/55 backdrop-blur p-3 space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="text-[0.55rem] uppercase tracking-[0.4em] text-white/50">
                     Visualization Controls
