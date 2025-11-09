@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import ClientWrapper from './components/ClientWrapper';
-import TechStackFooter from './components/TechStackFooter';
 
 export const metadata: Metadata = {
   title: 'too.foo — Solar Memory Online',
@@ -50,8 +49,6 @@ export default function Home() {
         </div>
         <p className="sr-only">Illustrative; not to scale.</p>
       </section>
-
-      <TechStackFooter />
     </div>
   );
 }

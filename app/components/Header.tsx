@@ -1,0 +1,183 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import Controls from './Controls';
+import LayerControl from './LayerControl';
+import { HeroRef } from './Hero';
+
+const MISSION_STATS = [
+  { label: 'Phase', value: 'Prelaunch' },
+  { label: 'Window', value: '1977 → 2077' },
+  { label: 'Signal', value: 'Voyager + IBEX' },
+  { label: 'Medium', value: 'Heliopause' },
+];
+
+interface HeaderProps {
+  heroRef: React.RefObject<HeroRef>;
+  currentYear: number;
+  onTimeChange: (time: number) => void;
+  onDirectionChange: (direction: 1 | -1) => void;
+  onMotionChange: (enabled: boolean) => void;
+  onPauseChange: (paused: boolean) => void;
+}
+
+export default function Header({
+  heroRef,
+  currentYear,
+  onTimeChange,
+  onDirectionChange,
+  onMotionChange,
+  onPauseChange,
+}: HeaderProps) {
+  const [utcTime, setUtcTime] = useState('');
+  const [gitInfo, setGitInfo] = useState({
+    commit: process.env.NEXT_PUBLIC_GIT_COMMIT || 'local',
+    branch: process.env.NEXT_PUBLIC_GIT_BRANCH || 'main',
+    timestamp: process.env.NEXT_PUBLIC_BUILD_TIME || new Date().toISOString(),
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const updateUtc = () => setUtcTime(new Date().toUTCString());
+    updateUtc();
+    const id = window.setInterval(updateUtc, 1000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const formatDate = (year: number): string => {
+    if (year >= 1000 && year < 10000) {
+      const wholeYear = Math.floor(year);
+      const fraction = year - wholeYear;
+      const days = Math.floor(fraction * 365.25);
+      const date = new Date(wholeYear, 0, 1);
+      date.setDate(date.getDate() + days);
+      
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+    return year.toFixed(0);
+  };
+
+  const formatCommitHash = (hash: string) => {
+    return hash.length > 7 ? hash.substring(0, 7) : hash;
+  };
+
+  const formatBuildTime = (timestamp: string) => {
+    try {
+      const date = new Date(timestamp);
+      return date.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return timestamp;
+    }
+  };
+
+  return (
+    <header
+      className="fixed inset-x-0 top-0 z-30 pointer-events-none"
+      style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.25rem)' }}
+    >
+      <div className="px-2 sm:px-4 lg:px-6">
+        <div className="max-w-6xl mx-auto">
+          {/* Combined Header Panel */}
+          <div className="rounded-2xl sm:rounded-3xl border border-white/10 bg-black/65 backdrop-blur px-2 py-2 sm:px-4 sm:py-3 pointer-events-auto">
+            {/* Title and Metadata Row */}
+            <div className="flex flex-col gap-2 sm:gap-3 mb-2 sm:mb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                {/* Title */}
+                <div className="space-y-0.5 sm:space-y-1">
+                  <p className="text-[0.5rem] sm:text-[0.55rem] uppercase tracking-[0.45em] text-emerald-300/70">
+                    too.foo mission
+                  </p>
+                  <p className="text-lg sm:text-xl lg:text-2xl font-light leading-tight">
+                    Solar Memory Console
+                  </p>
+                </div>
+                
+                {/* Metadata - Compact on mobile */}
+                <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2 lg:gap-3">
+                  <div className="grid grid-cols-4 gap-1 sm:gap-2 text-xs text-white/80">
+                    {MISSION_STATS.map((stat) => (
+                      <div
+                        key={stat.label}
+                        className="rounded-xl sm:rounded-2xl border border-white/10 bg-white/5 px-1.5 py-1 sm:px-3 sm:py-2"
+                      >
+                        <p className="text-[0.4rem] sm:text-[0.45rem] uppercase tracking-[0.35em] text-white/50 leading-tight">
+                          {stat.label}
+                        </p>
+                        <p className="font-mono text-[0.65rem] sm:text-xs leading-tight">
+                          {stat.value}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="text-[0.65rem] sm:text-xs font-mono text-emerald-200/80 sm:text-right">
+                    UTC · {utcTime}
+                  </div>
+                </div>
+              </div>
+
+              {/* Deployment Info Row */}
+              <div className="flex flex-wrap items-center gap-2 text-[0.5rem] sm:text-[0.55rem] text-white/40">
+                <div className="flex items-center gap-1">
+                  <span className="uppercase tracking-wider">Branch:</span>
+                  <span className="font-mono text-white/60">{gitInfo.branch}</span>
+                </div>
+                <span className="text-white/20">•</span>
+                <div className="flex items-center gap-1">
+                  <span className="uppercase tracking-wider">Commit:</span>
+                  <span className="font-mono text-white/60">
+                    {formatCommitHash(gitInfo.commit)}
+                  </span>
+                </div>
+                <span className="text-white/20">•</span>
+                <div className="flex items-center gap-1">
+                  <span className="uppercase tracking-wider">Built:</span>
+                  <span className="font-mono text-white/60">
+                    {formatBuildTime(gitInfo.timestamp)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Solar Date Display - Integrated */}
+              <div className="border-t border-white/10 pt-2">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-[0.5rem] sm:text-[0.55rem] uppercase tracking-[0.35em] text-white/60">
+                    Solar Date
+                  </span>
+                  <span className="text-xl sm:text-2xl md:text-3xl font-mono font-light text-white/90">
+                    {formatDate(currentYear)}
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Controls Section - Integrated */}
+            <div className="border-t border-white/10 pt-2 sm:pt-3 space-y-2 sm:space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="text-[0.5rem] sm:text-[0.55rem] uppercase tracking-[0.4em] text-white/50">
+                  Visualization Controls
+                </div>
+                <LayerControl heroRef={heroRef} />
+              </div>
+              <Controls
+                heroRef={heroRef}
+                onTimeChange={onTimeChange}
+                onDirectionChange={onDirectionChange}
+                onMotionChange={onMotionChange}
+                onPauseChange={onPauseChange}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
+
