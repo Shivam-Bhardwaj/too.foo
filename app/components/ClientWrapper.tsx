@@ -97,30 +97,36 @@ export default function ClientWrapper() {
           style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)' }}
         >
           <div className="max-w-6xl mx-auto h-full flex flex-col gap-2">
-            <div className="flex flex-col gap-3 rounded-3xl border border-white/10 bg-black/65 backdrop-blur px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+            {/* Title Section */}
+            <div className="rounded-3xl border border-white/10 bg-black/65 backdrop-blur px-4 py-3">
               <div className="space-y-1">
                 <p className="text-[0.55rem] uppercase tracking-[0.45em] text-emerald-300/70">
                   too.foo mission
                 </p>
                 <p className="text-xl sm:text-2xl font-light">Solar Memory Console</p>
-                <p className="text-xs text-white/70 max-w-2xl">
-                  Voyager telemetry · IBEX maps · Magnetohydrodynamic inference
-                </p>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-xs text-white/80 sm:grid-cols-4">
-                {MISSION_STATS.map((stat) => (
-                  <div key={stat.label} className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
-                    <p className="text-[0.45rem] uppercase tracking-[0.35em] text-white/50">
-                      {stat.label}
-                    </p>
-                    <p className="font-mono">{stat.value}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="text-xs font-mono text-emerald-200/80 lg:text-right">
-                UTC · {utcTime}
               </div>
             </div>
+            
+            {/* Metadata Section */}
+            <div className="rounded-3xl border border-white/10 bg-black/65 backdrop-blur px-4 py-3">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="grid grid-cols-2 gap-2 text-xs text-white/80 sm:grid-cols-4">
+                  {MISSION_STATS.map((stat) => (
+                    <div key={stat.label} className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
+                      <p className="text-[0.45rem] uppercase tracking-[0.35em] text-white/50">
+                        {stat.label}
+                      </p>
+                      <p className="font-mono">{stat.value}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="text-xs font-mono text-emerald-200/80 lg:text-right">
+                  UTC · {utcTime}
+                </div>
+              </div>
+            </div>
+            
+            {/* Controls Section */}
             <div className="flex-1 min-h-0">
               <div className="h-full overflow-y-auto rounded-3xl border border-white/10 bg-black/55 backdrop-blur p-3 space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -142,8 +148,24 @@ export default function ClientWrapper() {
         </div>
       </header>
 
+      {/* Footer Section */}
+      <footer
+        className="fixed inset-x-0 bottom-0 z-20 pointer-events-none"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
+      >
+        <div className="px-4 sm:px-6">
+          <div className="max-w-6xl mx-auto">
+            <div className="rounded-2xl border border-white/10 bg-black/55 backdrop-blur px-4 py-2">
+              <p className="text-[0.5rem] sm:text-[0.55rem] text-white/50 text-center">
+                Voyager telemetry · IBEX maps · Magnetohydrodynamic inference
+              </p>
+            </div>
+          </div>
+        </div>
+      </footer>
+
       {/* Date Display - responsive placement */}
-      <div className="fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom,0px)+6rem)] sm:inset-auto sm:left-1/2 sm:bottom-[calc(env(safe-area-inset-bottom,0px)+6rem)] sm:w-auto sm:-translate-x-1/2 z-20 pointer-events-none">
+      <div className="fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom,0px)+4rem)] sm:inset-auto sm:left-1/2 sm:bottom-[calc(env(safe-area-inset-bottom,0px)+4rem)] sm:w-auto sm:-translate-x-1/2 z-20 pointer-events-none">
         <div className="bg-black/55 backdrop-blur-md border border-white/10 rounded-2xl px-4 py-3 sm:bg-transparent sm:border-none sm:backdrop-blur-0 sm:px-0 sm:py-0 sm:text-center">
           <p className="text-[0.65rem] uppercase tracking-[0.35em] text-white/60 mb-1 sm:mb-2 text-left sm:text-center">
             Solar Date
