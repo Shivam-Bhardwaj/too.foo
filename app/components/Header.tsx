@@ -90,14 +90,74 @@ export default function Header({
             {/* Title and Metadata Row */}
             <div className="flex flex-col gap-2 sm:gap-3 mb-2 sm:mb-3">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                {/* Title */}
-                <div className="space-y-0.5 sm:space-y-1">
-                  <p className="text-[0.5rem] sm:text-[0.55rem] uppercase tracking-[0.45em] text-emerald-300/70">
-                    too.foo mission
-                  </p>
-                  <p className="text-lg sm:text-xl lg:text-2xl font-light leading-tight">
-                    Solar Memory Console
-                  </p>
+                {/* Title with Icon */}
+                <div className="flex items-center gap-2 sm:gap-3">
+                  {/* Solar Icon */}
+                  <div className="relative flex-shrink-0">
+                    <svg
+                      width="32"
+                      height="32"
+                      viewBox="0 0 100 100"
+                      className="w-6 h-6 sm:w-8 sm:h-8"
+                      aria-label="Solar icon"
+                    >
+                      {/* Sun core with gradient */}
+                      <defs>
+                        <radialGradient id="sunGradient" cx="50%" cy="50%" r="50%">
+                          <stop offset="0%" stopColor="#FDB813" stopOpacity="1" />
+                          <stop offset="70%" stopColor="#F59E0B" stopOpacity="0.9" />
+                          <stop offset="100%" stopColor="#EA580C" stopOpacity="0.7" />
+                        </radialGradient>
+                        <filter id="glow">
+                          <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+                          <feMerge>
+                            <feMergeNode in="coloredBlur" />
+                            <feMergeNode in="SourceGraphic" />
+                          </feMerge>
+                        </filter>
+                      </defs>
+                      
+                      {/* Central sun */}
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="20"
+                        fill="url(#sunGradient)"
+                        filter="url(#glow)"
+                      />
+                      
+                      {/* Sun rays */}
+                      {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => {
+                        const rad = (angle * Math.PI) / 180;
+                        const x1 = 50 + Math.cos(rad) * 25;
+                        const y1 = 50 + Math.sin(rad) * 25;
+                        const x2 = 50 + Math.cos(rad) * 35;
+                        const y2 = 50 + Math.sin(rad) * 35;
+                        return (
+                          <line
+                            key={angle}
+                            x1={x1}
+                            y1={y1}
+                            x2={x2}
+                            y2={y2}
+                            stroke="#FDB813"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            opacity="0.8"
+                          />
+                        );
+                      })}
+                    </svg>
+                  </div>
+                  
+                  <div className="space-y-0.5 sm:space-y-1">
+                    <p className="text-[0.5rem] sm:text-[0.55rem] uppercase tracking-[0.45em] text-emerald-300/70">
+                      too.foo mission
+                    </p>
+                    <p className="text-lg sm:text-xl lg:text-2xl font-light leading-tight">
+                      Solar Memory Console
+                    </p>
+                  </div>
                 </div>
                 
                 {/* Metadata - Compact on mobile */}
