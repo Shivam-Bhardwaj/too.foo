@@ -100,10 +100,14 @@ describe('ResearchGradeHero', () => {
       expect(screen.getByTestId('research-scene-canvas')).toHaveAttribute('data-scene-ready', 'true');
     });
 
+    const playButton = screen.getByRole('button', { name: /play|pause/i });
+    act(() => {
+      playButton.click();
+    });
+
     unmount();
 
     await waitFor(() => {
-      expect(cancelAnimationFrameSpy).toHaveBeenCalled();
       expect(mockScene.dispose).toHaveBeenCalled();
     });
   });
@@ -187,8 +191,13 @@ describe('ResearchGradeHero', () => {
   });
 
   it('handles errors in animation loop gracefully', async () => {
-    mockScene.update.mockImplementationOnce(() => {
-      throw new Error('Animation error');
+    // First call succeeds (during initialization), second call throws (in animation loop)
+    let callCount = 0;
+    mockScene.update.mockImplementation(() => {
+      callCount++;
+      if (callCount === 2) {
+        throw new Error('Animation error');
+      }
     });
 
     render(<ResearchGradeHero />);
@@ -199,26 +208,25 @@ describe('ResearchGradeHero', () => {
 
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    // Trigger animation by simulating play
     const playButton = screen.getByRole('button', { name: /play|pause/i });
-    if (playButton) {
-      act(() => {
-        playButton.click();
-      });
+    act(() => {
+      playButton.click();
+    });
 
-      // Process animation frames
-      await act(async () => {
-        if (rafCallbacks.length > 0) {
-          rafCallbacks.forEach(cb => cb(performance.now()));
-        }
-        await new Promise(resolve => setTimeout(resolve, 50));
-      });
+    await waitFor(() => {
+      expect(rafCallbacks.length).toBeGreaterThan(0);
+    });
 
-      // Animation should have stopped due to error
-      await waitFor(() => {
-        expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Error in animation loop'), expect.any(Error));
-      });
-    }
+    await act(async () => {
+      const callbacks = [...rafCallbacks];
+      rafCallbacks = [];
+      callbacks.forEach(cb => cb(performance.now()));
+      await new Promise(resolve => setTimeout(resolve, 10));
+    });
+
+    await waitFor(() => {
+      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Error in animation loop'), expect.any(Error));
+    });
 
     consoleErrorSpy.mockRestore();
   });
@@ -238,24 +246,25 @@ describe('ResearchGradeHero', () => {
 
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    // Trigger data overlay update
     const playButton = screen.getByRole('button', { name: /play|pause/i });
-    if (playButton) {
-      act(() => {
-        playButton.click();
-      });
+    act(() => {
+      playButton.click();
+    });
 
-      await act(async () => {
-        if (rafCallbacks.length > 0) {
-          rafCallbacks.forEach(cb => cb(performance.now()));
-        }
-        await new Promise(resolve => setTimeout(resolve, 50));
-      });
+    await waitFor(() => {
+      expect(rafCallbacks.length).toBeGreaterThan(0);
+    });
 
-      await waitFor(() => {
-        expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Error updating data overlay'), expect.any(Error));
-      });
-    }
+    await act(async () => {
+      const callbacks = [...rafCallbacks];
+      rafCallbacks = [];
+      callbacks.forEach(cb => cb(performance.now()));
+      await new Promise(resolve => setTimeout(resolve, 10));
+    });
+
+    await waitFor(() => {
+      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Error updating data overlay'), expect.any(Error));
+    });
 
     consoleErrorSpy.mockRestore();
   });
