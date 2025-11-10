@@ -217,20 +217,20 @@ export default function Controls({
 
   return (
     <>
-      {/* Controls - Header section (one line) */}
+      {/* Controls - Single compact row */}
       <div 
-        className="flex w-full flex-col sm:flex-row flex-wrap items-stretch sm:items-center justify-center gap-3 sm:gap-2 lg:gap-3"
+        className="flex items-center gap-1 flex-wrap"
         role="region"
         aria-label="Simulation controls">
         
         {/* Logarithmic Time Slider */}
-        <div className="flex flex-col flex-1 min-w-[180px] sm:min-w-[220px] gap-1.5 sm:gap-2">
+        <div className="flex items-center gap-1 flex-1 min-w-[120px] sm:min-w-[150px]">
           <label
             htmlFor="year-slider"
-            className="flex items-center justify-between text-[0.6rem] sm:text-[0.65rem] uppercase tracking-[0.35em] text-white/60"
+            className="flex items-center gap-1 text-[0.4rem] sm:text-[0.5rem] uppercase tracking-[0.2em] text-white/60 whitespace-nowrap"
           >
-            <span>Time</span>
-            <span className="font-mono text-white/80 text-[0.65rem] sm:text-[0.7rem] tracking-normal">
+            <span>Time:</span>
+            <span className="font-mono text-white/80 text-[0.5rem] sm:text-[0.55rem] tracking-normal">
               {formatLogTime(yearsToSeconds(year))}
             </span>
           </label>
@@ -247,7 +247,7 @@ export default function Controls({
             disabled={motionDisabled}
             aria-label="Time (logarithmic scale)"
             title="Scrub through time (logarithmic scale)"
-            className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-white/50"
+            className="flex-1 h-1.5 bg-white/20 rounded-lg appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-1 focus:ring-white/50"
             style={{
               background: `linear-gradient(to right, #ffffff 0%, #ffffff ${logSliderValue * 100}%, rgba(255, 255, 255, 0.2) ${logSliderValue * 100}%, rgba(255, 255, 255, 0.2) 100%)`,
             }}
@@ -255,15 +255,15 @@ export default function Controls({
         </div>
 
         {/* Divider */}
-        <div className="hidden sm:block h-6 w-px bg-white/20"></div>
+        <div className="h-4 w-px bg-white/20"></div>
 
         {/* Speed Controls */}
-        <div className="w-full sm:w-auto">
-          <p className="text-[0.6rem] sm:text-[0.65rem] uppercase tracking-[0.35em] text-white/60 mb-1.5 sm:mb-1">
-            Speed
-          </p>
+        <div className="flex items-center gap-1">
+          <span className="text-[0.4rem] sm:text-[0.5rem] uppercase tracking-[0.2em] text-white/60 whitespace-nowrap">
+            Speed:
+          </span>
           <div
-            className="flex w-full sm:w-auto flex-nowrap sm:flex-wrap items-center justify-start gap-1 overflow-x-auto sm:overflow-visible pb-1 sm:pb-0 -mx-1 sm:mx-0 px-1"
+            className="flex items-center gap-0.5 overflow-x-auto pb-0.5 -mx-0.5 px-0.5"
             data-speed-scroll
           >
             {SPEED_PRESETS.map((preset, index) => (
@@ -273,11 +273,11 @@ export default function Controls({
                 disabled={motionDisabled}
                 aria-label={`Set speed to ${preset.label}`}
                 title={`${preset.value} years per second`}
-                className={`px-1.5 sm:px-2 py-0.5 sm:py-1 min-w-[48px] sm:min-w-[56px] text-[0.65rem] sm:text-xs text-white border rounded transition-colors shrink-0 ${
+                className={`px-1 py-0.5 min-w-[36px] text-[0.5rem] sm:text-[0.55rem] text-white border rounded transition-colors shrink-0 ${
                   speedIndex === index
                     ? 'bg-white/30 border-white/40'
                     : 'bg-white/10 border-white/20 hover:bg-white/20'
-                } disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-white/50`}
+                } disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-1 focus:ring-white/50`}
               >
                 {preset.label}
               </button>
@@ -286,20 +286,20 @@ export default function Controls({
         </div>
 
         {/* Divider */}
-        <div className="hidden sm:block h-6 w-px bg-white/20"></div>
+        <div className="h-4 w-px bg-white/20"></div>
 
         {/* Direction and Control Buttons */}
-        <div className="w-full sm:w-auto">
-          <p className="text-[0.6rem] sm:text-[0.65rem] uppercase tracking-[0.35em] text-white/60 mb-1.5 sm:mb-1">
-            Transport
-          </p>
-          <div className="flex items-center justify-between sm:justify-center gap-1.5 sm:gap-2 flex-wrap">
+        <div className="flex items-center gap-1">
+          <span className="text-[0.4rem] sm:text-[0.5rem] uppercase tracking-[0.2em] text-white/60 whitespace-nowrap">
+            Transport:
+          </span>
+          <div className="flex items-center gap-0.5">
             <button
               onClick={handleDirectionToggle}
               disabled={motionDisabled}
               aria-label="Switch travel direction"
               title="Switch travel direction"
-              className="flex-1 sm:flex-none px-2 sm:px-3 py-1.5 sm:py-2 min-w-[44px] sm:min-w-[48px] text-xs text-white bg-white/10 border border-white/20 rounded hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-white/50 transition-colors"
+              className="px-1.5 py-0.5 min-w-[32px] text-[0.55rem] text-white bg-white/10 border border-white/20 rounded hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-1 focus:ring-white/50 transition-colors"
             >
               {direction === 1 ? '▶' : '◀'}
             </button>
@@ -309,7 +309,7 @@ export default function Controls({
               disabled={reduceMotion}
               aria-label={paused ? 'Resume' : 'Pause'}
               title={paused ? 'Resume' : 'Pause'}
-              className="flex-1 sm:flex-none px-2 sm:px-3 py-1.5 sm:py-2 min-w-[44px] sm:min-w-[48px] text-xs text-white bg-white/10 border border-white/20 rounded hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-white/50 transition-colors"
+              className="px-1.5 py-0.5 min-w-[32px] text-[0.55rem] text-white bg-white/10 border border-white/20 rounded hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-1 focus:ring-white/50 transition-colors"
             >
               {paused ? '▶' : '⏸'}
             </button>
@@ -319,7 +319,7 @@ export default function Controls({
               disabled={getPrefersReducedMotion()}
               aria-label="Disable background motion"
               title={reduceMotion ? 'Motion off' : 'Disable background motion'}
-              className="flex-1 sm:flex-none px-2 sm:px-3 py-1.5 sm:py-2 min-w-[60px] sm:min-w-[64px] text-xs text-white bg-white/10 border border-white/20 rounded hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-white/50 transition-colors"
+              className="px-1.5 py-0.5 min-w-[48px] text-[0.5rem] text-white bg-white/10 border border-white/20 rounded hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-1 focus:ring-white/50 transition-colors"
             >
               {reduceMotion ? 'Motion off' : 'Reduce'}
             </button>

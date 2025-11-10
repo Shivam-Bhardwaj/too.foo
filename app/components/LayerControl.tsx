@@ -97,13 +97,11 @@ export default function LayerControl({ heroRef }: LayerControlProps) {
   };
 
   return (
-    <div className="w-full pointer-events-auto" data-ui="layer-control">
-      <p className="text-[0.6rem] sm:text-[0.65rem] uppercase tracking-[0.35em] text-white/60 mb-1.5 sm:mb-1">
-        Layers
-      </p>
-      {/* Mobile: flex-wrap allows multiple rows naturally */}
-      {/* Desktop: CSS Grid with 2 rows, auto-flow column (columns auto-size to content) */}
-      <div className="flex flex-wrap sm:grid sm:grid-rows-2 sm:grid-flow-col items-center justify-start gap-1 overflow-x-auto sm:overflow-visible pb-1 sm:pb-0 -mx-1 sm:mx-0 px-1" style={{ gridAutoColumns: 'max-content' }}>
+    <div className="flex items-center gap-1 pointer-events-auto" data-ui="layer-control">
+      <span className="text-[0.4rem] sm:text-[0.5rem] uppercase tracking-[0.2em] text-white/60 whitespace-nowrap">
+        Layers:
+      </span>
+      <div className="flex items-center gap-0.5 overflow-x-auto pb-0.5 -mx-0.5 px-0.5" style={{ scrollbarWidth: 'thin' }}>
         {LAYER_GROUPS.flatMap((group) =>
           group.keys.map((key) => (
             <button
@@ -116,11 +114,11 @@ export default function LayerControl({ heroRef }: LayerControlProps) {
               onMouseDown={(e) => e.stopPropagation()}
               aria-label={`Toggle ${LAYER_LABELS[key]}`}
               title={LAYER_LABELS[key]}
-              className={`px-1.5 sm:px-2 py-0.5 sm:py-1 min-w-[48px] sm:min-w-[56px] text-[0.65rem] sm:text-xs text-white border rounded transition-colors shrink-0 ${
+              className={`px-1 py-0.5 min-w-[40px] text-[0.5rem] sm:text-[0.55rem] text-white border rounded transition-colors shrink-0 ${
                 layers[key]
                   ? 'bg-white/30 border-white/40'
                   : 'bg-white/10 border-white/20 hover:bg-white/20'
-              } focus:outline-none focus:ring-2 focus:ring-white/50`}
+              } focus:outline-none focus:ring-1 focus:ring-white/50`}
             >
               {LAYER_LABELS[key]}
             </button>
