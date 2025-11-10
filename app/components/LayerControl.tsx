@@ -32,7 +32,7 @@ export default function LayerControl({ heroRef }: LayerControlProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [layers, setLayers] = useState<ComponentVisibility>({
     heliosphere: true,
-    helioglow: true,
+    helioglow: false,
     terminationShock: true,
     bowShock: false,
     solarWind: true,

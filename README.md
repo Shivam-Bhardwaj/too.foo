@@ -87,8 +87,25 @@ github-portfolio/           # THE ONLY REPO ON YOUR GITHUB
    npm run dev
    ```
 
+## 🌳 Parallel Feature Development
+
+**Work on multiple features simultaneously without conflicts!**
+
+```bash
+# Start a new feature
+npm run task "Your feature description"
+
+# List active worktrees
+npm run worktrees
+```
+
+📖 **Documentation:**
+- [Quick Reference](WORKTREE_CHEATSHEET.md) - One-page cheat sheet
+- [Complete Guide](WORKTREE_GUIDE.md) - Full workflow documentation
+
 ## 📚 Documentation
 
+- [Worktree Guide](WORKTREE_GUIDE.md) - **Parallel feature development** ⭐
 - [Project Plan](docs/PROJECT_PLAN.md) - Detailed feature breakdown
 - [Architecture](docs/ARCHITECTURE.md) - System design and data flow
 - [Configuration](config/README.md) - Environment setup

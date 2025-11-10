@@ -15,9 +15,15 @@
     "test:visual": "npm run build && playwright test",
     "test:visual:update": "npm run build && playwright test --update-snapshots",
     "task": "node scripts/cursor-agent.js",
+    "issue": "node scripts/work-on-issue.js",
+    "merge-pr": "node scripts/merge-pr.js",
+    "github:cleanup": "node scripts/github-cleanup.js",
+    "keploy:record": "./scripts/keploy-record.sh",
+    "keploy:replay": "./scripts/keploy-replay.sh",
     "create-task": "node scripts/create-task.js",
     "worktree": "node scripts/worktree.js",
-    "worktrees": "node scripts/worktree.js list"
+    "worktrees": "node scripts/worktree.js list",
+    "verify-worktree": "./scripts/verify-worktree-setup.sh"
   },
   "dependencies": {
     "@octokit/rest": "^20.0.0",
