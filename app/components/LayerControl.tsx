@@ -97,11 +97,11 @@ export default function LayerControl({ heroRef }: LayerControlProps) {
   };
 
   return (
-    <div className="flex items-center gap-1 pointer-events-auto" data-ui="layer-control">
-      <span className="text-[0.4rem] sm:text-[0.5rem] uppercase tracking-[0.2em] text-white/60 whitespace-nowrap">
+    <div className="flex flex-wrap items-center gap-0.5 flex-1 min-w-0 pointer-events-auto" data-ui="layer-control">
+      <span className="text-[0.4rem] sm:text-[0.5rem] uppercase tracking-[0.2em] text-white/60 whitespace-nowrap flex-shrink-0">
         Layers:
       </span>
-      <div className="flex items-center gap-0.5 overflow-x-auto pb-0.5 -mx-0.5 px-0.5" style={{ scrollbarWidth: 'thin' }}>
+      <div className="flex flex-wrap items-center gap-0.5 flex-1 min-w-0">
         {LAYER_GROUPS.flatMap((group) =>
           group.keys.map((key) => (
             <button
@@ -114,7 +114,7 @@ export default function LayerControl({ heroRef }: LayerControlProps) {
               onMouseDown={(e) => e.stopPropagation()}
               aria-label={`Toggle ${LAYER_LABELS[key]}`}
               title={LAYER_LABELS[key]}
-              className={`px-1 py-0.5 min-w-[40px] text-[0.5rem] sm:text-[0.55rem] text-white border rounded transition-colors shrink-0 ${
+              className={`px-1 py-0.5 text-[0.5rem] sm:text-[0.55rem] text-white border rounded transition-colors ${
                 layers[key]
                   ? 'bg-white/30 border-white/40'
                   : 'bg-white/10 border-white/20 hover:bg-white/20'

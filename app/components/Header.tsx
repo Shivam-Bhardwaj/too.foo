@@ -83,12 +83,12 @@ export default function Header({
       className="fixed inset-x-0 top-0 z-30 pointer-events-none"
       style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.25rem)' }}
     >
-      <div className="px-2 sm:px-4 lg:px-6">
-        <div className="max-w-6xl mx-auto">
+      <div className="px-1 sm:px-2 lg:px-3">
+        <div className="w-full">
           {/* Combined Header Panel - 2 lines only */}
-          <div className="rounded-2xl sm:rounded-3xl border border-white/10 bg-black/65 backdrop-blur px-2 py-1 sm:px-3 sm:py-1.5 pointer-events-auto">
+          <div className="rounded-xl sm:rounded-2xl border border-white/10 bg-black/65 backdrop-blur px-2 py-1 sm:px-3 sm:py-1 pointer-events-auto">
             {/* Line 1: Title + Mission Stats + UTC + Solar Date + Git Info */}
-            <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 lg:gap-2">
+            <div className="flex flex-wrap items-center gap-0.5 sm:gap-1 lg:gap-1.5">
               {/* Title with Icon */}
               <div className="flex items-center gap-1 flex-shrink-0">
                 <svg
@@ -196,7 +196,7 @@ export default function Header({
             </div>
 
             {/* Line 2: Layers + Controls */}
-            <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 mt-1 pt-1 border-t border-white/10">
+            <div className="flex flex-wrap items-center gap-0.5 sm:gap-1 mt-0.5 pt-0.5 border-t border-white/10">
               <LayerControl heroRef={heroRef} />
               <Controls
                 heroRef={heroRef}
