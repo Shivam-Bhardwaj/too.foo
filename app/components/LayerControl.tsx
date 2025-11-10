@@ -28,8 +28,38 @@ const LAYER_LABELS: Record<keyof ComponentVisibility, string> = {
   constellations: 'Constellations',
 };
 
+// Group layers into logical categories
+const LAYER_GROUPS: Array<{
+  name: string;
+  keys: Array<keyof ComponentVisibility>;
+}> = [
+  {
+    name: 'Heliosphere',
+    keys: ['heliosphere', 'helioglow', 'terminationShock', 'bowShock'],
+  },
+  {
+    name: 'Plasma',
+    keys: ['solarWind', 'interstellarWind'],
+  },
+  {
+    name: 'Solar System',
+    keys: ['planets', 'orbits', 'moon'],
+  },
+  {
+    name: 'Spacecraft',
+    keys: ['voyagers'],
+  },
+  {
+    name: 'Reference',
+    keys: ['stars', 'famousStars', 'constellations'],
+  },
+  {
+    name: 'Markers',
+    keys: ['distanceMarkers', 'solarApex', 'labels', 'interstellarObjects'],
+  },
+];
+
 export default function LayerControl({ heroRef }: LayerControlProps) {
-  const [isOpen, setIsOpen] = useState(false);
   const [layers, setLayers] = useState<ComponentVisibility>({
     heliosphere: true,
     helioglow: false,
@@ -43,10 +73,10 @@ export default function LayerControl({ heroRef }: LayerControlProps) {
     stars: true,
     famousStars: true,
     voyagers: true,
-    distanceMarkers: false, // Hidden by default - removed as meaningless artifact
-    solarApex: false, // Hidden by default - removed as meaningless artifact
+    distanceMarkers: false,
+    solarApex: false,
     labels: true,
-    interstellarObjects: false, // Hidden by default - removed as meaningless artifacts
+    interstellarObjects: false,
     constellations: false,
   });
 
@@ -66,76 +96,37 @@ export default function LayerControl({ heroRef }: LayerControlProps) {
     heroRef.current?.toggleComponent(key, newValue);
   };
 
-  const layerControlContent = (
-    <div className="pointer-events-auto" data-ui="layer-control">
-      <button
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          setIsOpen(!isOpen);
-        }}
-        onMouseDown={(e) => {
-          e.stopPropagation();
-        }}
-        className="bg-black/60 backdrop-blur-sm border border-white/20 rounded-lg px-4 py-2 text-white text-sm hover:bg-black/80 transition-colors shadow-lg cursor-pointer"
-        aria-label="Toggle layer controls"
-        type="button"
-        style={{ pointerEvents: 'auto', zIndex: 101 }}
-      >
-        {isOpen ? '✕ Close Layers' : '☰ Layers'}
-      </button>
-      
-      {isOpen && (
-        <div 
-          className="mt-2 bg-black/80 backdrop-blur-sm border border-white/20 rounded-lg p-3 shadow-lg max-h-96 overflow-y-auto pointer-events-auto" 
-          style={{ pointerEvents: 'auto', zIndex: 102 }}
-          onMouseDown={(e) => e.stopPropagation()}
-        >
-          <h3 className="text-white text-xs font-semibold mb-2 uppercase tracking-wide">
-            Simulation Components
-          </h3>
-          <div className="flex flex-col gap-1.5">
-            {(Object.keys(layers) as Array<keyof ComponentVisibility>).map((key) => (
-              <label
-                key={key}
-                className="flex items-center gap-2 cursor-pointer hover:bg-white/5 p-1.5 rounded transition-colors"
-                style={{ pointerEvents: 'auto' }}
-                onMouseDown={(e) => e.stopPropagation()}
-              >
-                <input
-                  type="checkbox"
-                  checked={layers[key]}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    handleToggle(key);
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                  className="w-4 h-4 cursor-pointer"
-                  style={{ pointerEvents: 'auto' }}
-                />
-                <span className="text-white/90 text-sm select-none">
-                  {LAYER_LABELS[key]}
-                </span>
-              </label>
-            ))}
-          </div>
-          
-          <div className="mt-3 pt-3 border-t border-white/10">
-            <p className="text-white/50 text-xs">
-              Toggle components for scientific analysis
-            </p>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-
   return (
-    <div 
-      className="relative pointer-events-auto" 
-      data-ui="layer-control"
-    >
-      {layerControlContent}
+    <div className="w-full pointer-events-auto" data-ui="layer-control">
+      <p className="text-[0.6rem] sm:text-[0.65rem] uppercase tracking-[0.35em] text-white/60 mb-1.5 sm:mb-1">
+        Layers
+      </p>
+      {/* Mobile: flex-wrap allows multiple rows naturally */}
+      {/* Desktop: CSS Grid with 2 rows, auto-flow column (columns auto-size to content) */}
+      <div className="flex flex-wrap sm:grid sm:grid-rows-2 sm:grid-flow-col items-center justify-start gap-1 overflow-x-auto sm:overflow-visible pb-1 sm:pb-0 -mx-1 sm:mx-0 px-1" style={{ gridAutoColumns: 'max-content' }}>
+        {LAYER_GROUPS.flatMap((group) =>
+          group.keys.map((key) => (
+            <button
+              key={key}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleToggle(key);
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              aria-label={`Toggle ${LAYER_LABELS[key]}`}
+              title={LAYER_LABELS[key]}
+              className={`px-1.5 sm:px-2 py-0.5 sm:py-1 min-w-[48px] sm:min-w-[56px] text-[0.65rem] sm:text-xs text-white border rounded transition-colors shrink-0 ${
+                layers[key]
+                  ? 'bg-white/30 border-white/40'
+                  : 'bg-white/10 border-white/20 hover:bg-white/20'
+              } focus:outline-none focus:ring-2 focus:ring-white/50`}
+            >
+              {LAYER_LABELS[key]}
+            </button>
+          ))
+        )}
+      </div>
     </div>
   );
 }
