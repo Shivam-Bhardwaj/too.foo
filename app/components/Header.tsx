@@ -83,152 +83,128 @@ export default function Header({
       className="fixed inset-x-0 top-0 z-30 pointer-events-none"
       style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.25rem)' }}
     >
-      <div className="px-2 sm:px-4 lg:px-6">
-        <div className="max-w-6xl mx-auto">
-          {/* Combined Header Panel */}
-          <div className="rounded-2xl sm:rounded-3xl border border-white/10 bg-black/65 backdrop-blur px-2 py-1.5 sm:px-4 sm:py-2 pointer-events-auto">
-            {/* Main Header Row - Single line on desktop, wraps on mobile */}
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3 lg:gap-4">
-              {/* Title with Icon - Always first */}
-              <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-                {/* Solar Icon */}
-                <div className="relative flex-shrink-0">
-                  <svg
-                    width="32"
-                    height="32"
-                    viewBox="0 0 100 100"
-                    className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7"
-                    aria-label="Solar icon"
-                  >
-                    {/* Sun core with gradient */}
-                    <defs>
-                      <radialGradient id="sunGradient" cx="50%" cy="50%" r="50%">
-                        <stop offset="0%" stopColor="#FDB813" stopOpacity="1" />
-                        <stop offset="70%" stopColor="#F59E0B" stopOpacity="0.9" />
-                        <stop offset="100%" stopColor="#EA580C" stopOpacity="0.7" />
-                      </radialGradient>
-                      <filter id="glow">
-                        <feGaussianBlur stdDeviation="2" result="coloredBlur" />
-                        <feMerge>
-                          <feMergeNode in="coloredBlur" />
-                          <feMergeNode in="SourceGraphic" />
-                        </feMerge>
-                      </filter>
-                    </defs>
-                    
-                    {/* Central sun */}
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="20"
-                      fill="url(#sunGradient)"
-                      filter="url(#glow)"
-                    />
-                    
-                    {/* Sun rays */}
-                    {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => {
-                      const rad = (angle * Math.PI) / 180;
-                      const x1 = 50 + Math.cos(rad) * 25;
-                      const y1 = 50 + Math.sin(rad) * 25;
-                      const x2 = 50 + Math.cos(rad) * 35;
-                      const y2 = 50 + Math.sin(rad) * 35;
-                      return (
-                        <line
-                          key={angle}
-                          x1={x1}
-                          y1={y1}
-                          x2={x2}
-                          y2={y2}
-                          stroke="#FDB813"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                          opacity="0.8"
-                        />
-                      );
-                    })}
-                  </svg>
-                </div>
-                
-                <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-2">
-                  <p className="text-[0.45rem] sm:text-[0.5rem] uppercase tracking-[0.4em] text-emerald-300/70 leading-tight">
+      <div className="px-1 sm:px-2 lg:px-3">
+        <div className="w-full">
+          {/* Combined Header Panel - 2 lines only */}
+          <div className="rounded-xl sm:rounded-2xl border border-white/10 bg-black/65 backdrop-blur px-2 py-1 sm:px-3 sm:py-1 pointer-events-auto">
+            {/* Line 1: Title + Mission Stats + UTC + Solar Date + Git Info */}
+            <div className="flex flex-wrap items-center gap-0.5 sm:gap-1 lg:gap-1.5">
+              {/* Title with Icon */}
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <svg
+                  width="32"
+                  height="32"
+                  viewBox="0 0 100 100"
+                  className="w-4 h-4 sm:w-5 sm:h-5"
+                  aria-label="Solar icon"
+                >
+                  <defs>
+                    <radialGradient id="sunGradient" cx="50%" cy="50%" r="50%">
+                      <stop offset="0%" stopColor="#FDB813" stopOpacity="1" />
+                      <stop offset="70%" stopColor="#F59E0B" stopOpacity="0.9" />
+                      <stop offset="100%" stopColor="#EA580C" stopOpacity="0.7" />
+                    </radialGradient>
+                    <filter id="glow">
+                      <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+                      <feMerge>
+                        <feMergeNode in="coloredBlur" />
+                        <feMergeNode in="SourceGraphic" />
+                      </feMerge>
+                    </filter>
+                  </defs>
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="20"
+                    fill="url(#sunGradient)"
+                    filter="url(#glow)"
+                  />
+                  {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => {
+                    const rad = (angle * Math.PI) / 180;
+                    const x1 = 50 + Math.cos(rad) * 25;
+                    const y1 = 50 + Math.sin(rad) * 25;
+                    const x2 = 50 + Math.cos(rad) * 35;
+                    const y2 = 50 + Math.sin(rad) * 35;
+                    return (
+                      <line
+                        key={angle}
+                        x1={x1}
+                        y1={y1}
+                        x2={x2}
+                        y2={y2}
+                        stroke="#FDB813"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        opacity="0.8"
+                      />
+                    );
+                  })}
+                </svg>
+                <div className="flex items-baseline gap-1">
+                  <p className="text-[0.35rem] sm:text-[0.4rem] uppercase tracking-[0.3em] text-emerald-300/70 leading-tight">
                     too.foo mission
                   </p>
-                  <p className="text-base sm:text-lg lg:text-xl font-light leading-tight">
+                  <p className="text-xs sm:text-sm font-light leading-tight">
                     Solar Memory Console
                   </p>
                 </div>
               </div>
               
-              {/* Metadata - Inline on desktop, wraps on mobile */}
-              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 lg:gap-3 flex-1 min-w-0">
-                {/* Mission Stats - Compact grid */}
-                <div className="grid grid-cols-4 gap-1 sm:gap-1.5 text-xs text-white/80 flex-shrink-0">
-                  {MISSION_STATS.map((stat) => (
-                    <div
-                      key={stat.label}
-                      className="rounded-lg sm:rounded-xl border border-white/10 bg-white/5 px-1 py-0.5 sm:px-2 sm:py-1"
-                    >
-                      <p className="text-[0.35rem] sm:text-[0.4rem] uppercase tracking-[0.3em] text-white/50 leading-tight">
-                        {stat.label}
-                      </p>
-                      <p className="font-mono text-[0.6rem] sm:text-[0.7rem] leading-tight truncate">
-                        {stat.value}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-                
-                {/* UTC Time - Compact */}
-                <div className="text-[0.6rem] sm:text-[0.7rem] font-mono text-emerald-200/80 ml-auto sm:ml-0 flex-shrink-0">
-                  UTC · {utcTime}
-                </div>
+              {/* Mission Stats - Inline compact */}
+              <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
+                {MISSION_STATS.map((stat, idx) => (
+                  <div
+                    key={stat.label}
+                    className="flex items-center gap-0.5 rounded border border-white/10 bg-white/5 px-1 py-0.5"
+                  >
+                    <span className="text-[0.3rem] uppercase tracking-wider text-white/50">
+                      {stat.label}:
+                    </span>
+                    <span className="font-mono text-[0.5rem] sm:text-[0.55rem] text-white/80 leading-tight">
+                      {stat.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              
+              {/* UTC Time */}
+              <div className="text-[0.4rem] sm:text-[0.5rem] font-mono text-emerald-200/80 flex-shrink-0">
+                UTC · {utcTime}
+              </div>
+              
+              {/* Solar Date */}
+              <div className="flex items-baseline gap-1 flex-shrink-0">
+                <span className="text-[0.35rem] uppercase tracking-wider text-white/60">
+                  Solar Date:
+                </span>
+                <span className="text-xs sm:text-sm font-mono font-light text-white/90">
+                  {formatDate(currentYear)}
+                </span>
               </div>
 
-              {/* Git Info - Compact, wraps on mobile */}
-              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[0.45rem] sm:text-[0.5rem] text-white/40 w-full sm:w-auto">
-                <div className="flex items-center gap-1">
-                  <span className="uppercase tracking-wider">BRANCH:</span>
-                  <span className="font-mono text-white/60">{gitInfo.branch}</span>
-                </div>
+              {/* Git Info - Compact */}
+              <div className="flex items-center gap-1 text-[0.35rem] sm:text-[0.4rem] text-white/40 ml-auto flex-shrink-0">
+                <span className="uppercase tracking-wider">BRANCH:</span>
+                <span className="font-mono text-white/60">{gitInfo.branch}</span>
                 <span className="text-white/20">•</span>
-                <div className="flex items-center gap-1">
-                  <span className="uppercase tracking-wider">COMMIT:</span>
-                  <span className="font-mono text-white/60">
-                    {formatCommitHash(gitInfo.commit)}
-                  </span>
-                </div>
+                <span className="uppercase tracking-wider">COMMIT:</span>
+                <span className="font-mono text-white/60">{formatCommitHash(gitInfo.commit)}</span>
                 <span className="text-white/20">•</span>
-                <div className="flex items-center gap-1">
-                  <span className="uppercase tracking-wider">BUILT:</span>
-                  <span className="font-mono text-white/60">
-                    {formatBuildTime(gitInfo.timestamp)}
-                  </span>
-                </div>
+                <span className="uppercase tracking-wider">BUILT:</span>
+                <span className="font-mono text-white/60">{formatBuildTime(gitInfo.timestamp)}</span>
               </div>
             </div>
 
-            {/* Solar Date - Compact inline row */}
-            <div className="flex items-baseline gap-2 mt-1.5 sm:mt-2 border-t border-white/10 pt-1.5 sm:pt-2">
-              <span className="text-[0.45rem] sm:text-[0.5rem] uppercase tracking-[0.3em] text-white/60">
-                Solar Date
-              </span>
-              <span className="text-lg sm:text-xl md:text-2xl font-mono font-light text-white/90">
-                {formatDate(currentYear)}
-              </span>
-            </div>
-            
-            {/* Controls Section - Compact */}
-            <div className="border-t border-white/10 pt-1.5 sm:pt-2 mt-1.5 sm:mt-2">
+            {/* Line 2: Layers + Controls */}
+            <div className="flex flex-wrap items-center gap-0.5 sm:gap-1 mt-0.5 pt-0.5 border-t border-white/10">
               <LayerControl heroRef={heroRef} />
-              <div className="mt-3 sm:mt-2">
-                <Controls
-                  heroRef={heroRef}
-                  onTimeChange={onTimeChange}
-                  onDirectionChange={onDirectionChange}
-                  onMotionChange={onMotionChange}
-                  onPauseChange={onPauseChange}
-                />
-              </div>
+              <Controls
+                heroRef={heroRef}
+                onTimeChange={onTimeChange}
+                onDirectionChange={onDirectionChange}
+                onMotionChange={onMotionChange}
+                onPauseChange={onPauseChange}
+              />
             </div>
           </div>
         </div>
