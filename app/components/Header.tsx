@@ -219,19 +219,16 @@ export default function Header({
             
             {/* Controls Section - Compact */}
             <div className="border-t border-white/10 pt-1.5 sm:pt-2 mt-1.5 sm:mt-2">
-              <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5 sm:mb-2">
-                <div className="text-[0.45rem] sm:text-[0.5rem] uppercase tracking-[0.35em] text-white/50">
-                  Visualization Controls
-                </div>
-                <LayerControl heroRef={heroRef} />
+              <LayerControl heroRef={heroRef} />
+              <div className="mt-3 sm:mt-2">
+                <Controls
+                  heroRef={heroRef}
+                  onTimeChange={onTimeChange}
+                  onDirectionChange={onDirectionChange}
+                  onMotionChange={onMotionChange}
+                  onPauseChange={onPauseChange}
+                />
               </div>
-              <Controls
-                heroRef={heroRef}
-                onTimeChange={onTimeChange}
-                onDirectionChange={onDirectionChange}
-                onMotionChange={onMotionChange}
-                onPauseChange={onPauseChange}
-              />
             </div>
           </div>
         </div>
