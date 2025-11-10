@@ -9,7 +9,7 @@ if [ -f ".git" ]; then
     # Worktree: .git is a file pointing to the worktree gitdir
     # For worktrees, hooks go in the main repo's .git/hooks
     MAIN_GIT_DIR=$(git rev-parse --git-common-dir 2>/dev/null || git rev-parse --git-dir 2>/dev/null)
-    HOOKS_DIR="$MAIN_GIT_DIR/hooks"
+HOOKS_DIR="$MAIN_GIT_DIR/hooks"
     WORKTREE_ROOT=$(git rev-parse --show-toplevel)
 elif [ -d ".git" ]; then
     # Regular repo
@@ -21,6 +21,7 @@ else
 fi
 
 COMMIT_MSG_HOOK="$HOOKS_DIR/commit-msg"
+PRE_PUSH_HOOK="$HOOKS_DIR/pre-push"
 
 # Create hooks directory if it doesn't exist
 mkdir -p "$HOOKS_DIR"
@@ -66,6 +67,28 @@ EOF
 
 chmod +x "$COMMIT_MSG_HOOK"
 
+# Create pre-push hook that runs consolidated checks
+cat > "$PRE_PUSH_HOOK" << EOF
+#!/bin/bash
+# Git pre-push hook to run local checks
+
+REPO_ROOT=\$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+if [ -f "\$REPO_ROOT/scripts/pre-push.sh" ]; then
+  bash "\$REPO_ROOT/scripts/pre-push.sh"
+  exit $?
+fi
+
+exit 0
+EOF
+
+chmod +x "$PRE_PUSH_HOOK"
+
 echo "✅ Git hooks installed successfully"
-echo "   Commit messages will now be formatted with metadata"
+echo "   • commit-msg: metadata formatting"
+echo "   • pre-push: local tests/build (VCS-only workflow)"
+# Pre-push hook backup if exists and not ours
+if [ -f "$PRE_PUSH_HOOK" ] && ! grep -q "scripts/pre-push.sh" "$PRE_PUSH_HOOK"; then
+    echo "⚠️  pre-push hook already exists. Backing up..."
+    mv "$PRE_PUSH_HOOK" "$PRE_PUSH_HOOK.backup"
+fi
 

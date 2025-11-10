@@ -1,0 +1,38 @@
+#!/bin/bash
+# Consolidated local checks before pushing to GitHub (VCS-only mode)
+# - Installs deps on first run
+# - Runs unit/integration tests
+# - Builds the app to ensure production parity
+# - Optionally runs visual tests if ENABLE_VISUAL_TESTS=1
+
+set -euo pipefail
+
+echo "🚦 Running local checks (tests/build)..."
+
+# Ensure Node dependencies
+if [ ! -d node_modules ]; then
+  echo "📦 Installing dependencies (node_modules missing)..."
+  npm install --silent
+fi
+
+# Unit and integration tests
+echo "🧪 Running unit/integration tests..."
+npm run -s test
+
+# Build check
+echo "🏗️  Building production bundle..."
+npm run -s build
+
+# Visual tests (optional)
+if [ "${ENABLE_VISUAL_TESTS:-0}" = "1" ]; then
+  echo "👀 Running visual tests..."
+  npm run -s test:visual || {
+    echo "❌ Visual tests failed. To skip, unset ENABLE_VISUAL_TESTS or set to 0." >&2
+    exit 1
+  }
+else
+  echo "ℹ️  Skipping visual tests (set ENABLE_VISUAL_TESTS=1 to enable)."
+fi
+
+echo "✅ All checks passed."
+

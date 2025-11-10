@@ -9,6 +9,30 @@ export type HeroRef = {
   getVisibility: () => ComponentVisibility;
 };
 
+type ViewportSnapshot = {
+  width: number;
+  height: number;
+  devicePixelRatio: number;
+};
+
+const getViewportSnapshot = (): ViewportSnapshot => {
+  if (typeof window === 'undefined') {
+    return { width: 0, height: 0, devicePixelRatio: 1 };
+  }
+  const viewport = window.visualViewport;
+  return {
+    width: viewport?.width ?? window.innerWidth,
+    height: viewport?.height ?? window.innerHeight,
+    devicePixelRatio: window.devicePixelRatio ?? 1,
+  };
+};
+
+const setViewportCssVar = (height: number) => {
+  if (typeof document !== 'undefined') {
+    document.documentElement.style.setProperty('--viewport-height', `${height}px`);
+  }
+};
+
 const Hero = forwardRef<HeroRef>((props, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneRef = useRef<SceneAPI | null>(null);
@@ -32,7 +56,7 @@ const Hero = forwardRef<HeroRef>((props, ref) => {
       }
       return {
         heliosphere: true,
-        helioglow: true,
+        helioglow: false,
         terminationShock: true,
         bowShock: false,
         solarWind: true,
@@ -64,24 +88,30 @@ const Hero = forwardRef<HeroRef>((props, ref) => {
     }
 
     try {
-      const scene = createScene(canvasRef.current);
+      const initialViewport = getViewportSnapshot();
+      const scene = createScene(canvasRef.current, { initialViewport });
       sceneRef.current = scene;
 
       const handleResize = () => {
-        if (canvasRef.current) {
-          const rect = canvasRef.current.getBoundingClientRect();
-          scene.resize(rect.width, rect.height);
-        }
+        if (!canvasRef.current || !sceneRef.current) return;
+        const { width, height } = getViewportSnapshot();
+        setViewportCssVar(height);
+        canvasRef.current.style.width = `${width}px`;
+        canvasRef.current.style.height = `${height}px`;
+        sceneRef.current.resize(width || initialViewport.width, height || initialViewport.height);
       };
 
+      setViewportCssVar(initialViewport.height);
       handleResize();
       window.addEventListener('resize', handleResize);
+      window.visualViewport?.addEventListener('resize', handleResize);
       
       // Initial render with current year (2024) and no drift
       scene.update(2024.0, 1, false);
 
       return () => {
         window.removeEventListener('resize', handleResize);
+        window.visualViewport?.removeEventListener('resize', handleResize);
         scene.dispose();
         sceneRef.current = null;
       };
@@ -107,7 +137,7 @@ const Hero = forwardRef<HeroRef>((props, ref) => {
     <canvas
       ref={canvasRef}
       className="absolute inset-0 w-full h-full pointer-events-auto"
-      style={{ pointerEvents: 'auto' }}
+      style={{ pointerEvents: 'auto', touchAction: 'none' }}
       aria-hidden="true"
     />
   );
@@ -116,4 +146,3 @@ const Hero = forwardRef<HeroRef>((props, ref) => {
 Hero.displayName = 'Hero';
 
 export default Hero;
-
