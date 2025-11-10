@@ -101,7 +101,9 @@ export default function LayerControl({ heroRef }: LayerControlProps) {
       <p className="text-[0.6rem] sm:text-[0.65rem] uppercase tracking-[0.35em] text-white/60 mb-1.5 sm:mb-1">
         Layers
       </p>
-      <div className="flex flex-wrap items-center justify-start gap-1 overflow-x-auto sm:overflow-visible pb-1 sm:pb-0 -mx-1 sm:mx-0 px-1">
+      {/* Mobile: flex-wrap allows multiple rows naturally */}
+      {/* Desktop: CSS Grid with 2 rows, auto-flow column (columns auto-size to content) */}
+      <div className="flex flex-wrap sm:grid sm:grid-rows-2 sm:grid-flow-col items-center justify-start gap-1 overflow-x-auto sm:overflow-visible pb-1 sm:pb-0 -mx-1 sm:mx-0 px-1" style={{ gridAutoColumns: 'max-content' }}>
         {LAYER_GROUPS.flatMap((group) =>
           group.keys.map((key) => (
             <button
