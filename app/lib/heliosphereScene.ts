@@ -1601,9 +1601,11 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
     const portraitFactor = THREE.MathUtils.clamp(1 - aspect, 0, 1);
     
     // More aggressive FOV adjustment for mobile portrait mode
-    if (isMobile && portraitFactor > 0.5) {
+    if (isMobile && portraitFactor > 0) {
       // Mobile portrait: wider FOV (75-80°) for better overview
-      camera.fov = THREE.MathUtils.lerp(75, 80, portraitFactor);
+      // Apply mobile optimization to all portrait orientations on mobile
+      const mobilePortraitFactor = Math.min(portraitFactor * 2, 1); // Scale to full range
+      camera.fov = THREE.MathUtils.lerp(75, 80, mobilePortraitFactor);
       // Position camera further back for better overview
       camera.position.set(
         defaultCameraPosition.x,
