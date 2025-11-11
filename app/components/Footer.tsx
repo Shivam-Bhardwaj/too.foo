@@ -18,27 +18,27 @@ export default function Footer() {
     >
       <div className="px-2 sm:px-4 lg:px-6">
         <div className="max-w-6xl mx-auto">
-          <div className="rounded-2xl border border-white/10 bg-black/55 backdrop-blur px-3 py-2 sm:px-4 sm:py-2.5 pointer-events-auto">
+          <div className="rounded-lg sm:rounded-xl lg:rounded-2xl border border-white/10 bg-black/55 backdrop-blur px-2 py-1.5 sm:px-4 sm:py-2.5 pointer-events-auto">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               {/* Tech Stack */}
-              <div className="flex flex-col gap-1.5">
-                <span className="text-[0.45rem] sm:text-[0.5rem] uppercase tracking-[0.35em] text-white/40">
+              <div className="flex flex-col gap-1 sm:gap-1.5">
+                <span className="text-[0.6rem] sm:text-[0.45rem] lg:text-[0.5rem] uppercase tracking-[0.35em] text-white/40">
                   Tech Stack
                 </span>
-                <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                <div className="flex flex-wrap gap-1 sm:gap-1.5 lg:gap-2">
                   {TECH_STACK.map((tech) => (
                     <a
                       key={tech.name}
                       href={tech.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="group flex items-baseline gap-1 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 transition-colors"
+                      className="group flex items-baseline gap-1 px-2 py-1 sm:px-2.5 sm:py-1 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 active:bg-white/15 transition-colors min-h-[44px] sm:min-h-0"
                       title={`${tech.name} v${tech.version}`}
                     >
-                      <span className="text-[0.6rem] sm:text-[0.65rem] text-white/70 group-hover:text-white/90">
+                      <span className="text-[0.7rem] sm:text-[0.6rem] lg:text-[0.65rem] text-white/70 group-hover:text-white/90">
                         {tech.name}
                       </span>
-                      <span className="text-[0.5rem] sm:text-[0.55rem] font-mono text-white/40 group-hover:text-white/60">
+                      <span className="text-[0.6rem] sm:text-[0.5rem] lg:text-[0.55rem] font-mono text-white/40 group-hover:text-white/60">
                         {tech.version}
                       </span>
                     </a>
@@ -47,7 +47,7 @@ export default function Footer() {
               </div>
 
               {/* License */}
-              <div className="text-[0.45rem] sm:text-[0.5rem] uppercase tracking-[0.3em] text-white/30 text-center sm:text-right">
+              <div className="text-[0.6rem] sm:text-[0.45rem] lg:text-[0.5rem] uppercase tracking-[0.3em] text-white/30 text-center sm:text-right">
                 <div>AGPL-3.0-or-later</div>
                 <div>TooFoo Continuum License v0.1</div>
               </div>

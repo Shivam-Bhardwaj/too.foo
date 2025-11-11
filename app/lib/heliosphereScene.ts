@@ -102,14 +102,30 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
   // Interactive camera controls
   const controls = new OrbitControls(camera, canvas);
   controls.enableDamping = true; // Smooth camera movement
-  controls.dampingFactor = 0.05;
+  controls.dampingFactor = isMobileViewport ? 0.08 : 0.05; // More damping on mobile for stability
   controls.enableZoom = true;
   controls.enablePan = true;
+  
+  // Mobile-optimized touch controls
+  if (isMobileViewport) {
+    // Configure touch controls for mobile
+    if ('touches' in controls) {
+      (controls as any).touches = {
+        ONE: 0, // ROTATE
+        TWO: 2, // DOLLY_PAN
+      };
+    }
+    controls.enableRotate = true;
+    controls.rotateSpeed = 0.5; // Slower rotation on mobile
+    controls.panSpeed = 0.5; // Slower panning on mobile
+    controls.zoomSpeed = 0.6; // Slower zoom on mobile
+  }
+  
   controls.minDistance = 3; // Don't zoom too close
   controls.maxDistance = 50; // Don't zoom too far
   controls.target.set(0, 0, 0); // Look at heliosphere center
   controls.update();
-  adjustCameraForViewport(initialAspect);
+  adjustCameraForViewport(initialAspect, isMobileViewport);
   
   // Prevent OrbitControls from capturing clicks on UI elements
   // Check if click target is a UI element before allowing controls to handle it
@@ -1581,14 +1597,29 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
     renderer.render(scene, camera);
   }
 
-  function adjustCameraForViewport(aspect: number) {
+  function adjustCameraForViewport(aspect: number, isMobile: boolean = false) {
     const portraitFactor = THREE.MathUtils.clamp(1 - aspect, 0, 1);
-    camera.fov = THREE.MathUtils.lerp(55, 68, portraitFactor);
-    camera.position.set(
-      defaultCameraPosition.x,
-      defaultCameraPosition.y + portraitFactor * 0.8,
-      defaultCameraPosition.z + portraitFactor * 4.5
-    );
+    
+    // More aggressive FOV adjustment for mobile portrait mode
+    if (isMobile && portraitFactor > 0.5) {
+      // Mobile portrait: wider FOV (75-80°) for better overview
+      camera.fov = THREE.MathUtils.lerp(75, 80, portraitFactor);
+      // Position camera further back for better overview
+      camera.position.set(
+        defaultCameraPosition.x,
+        defaultCameraPosition.y + portraitFactor * 1.2,
+        defaultCameraPosition.z + portraitFactor * 6.5
+      );
+    } else {
+      // Desktop or landscape: standard adjustment
+      camera.fov = THREE.MathUtils.lerp(55, 68, portraitFactor);
+      camera.position.set(
+        defaultCameraPosition.x,
+        defaultCameraPosition.y + portraitFactor * 0.8,
+        defaultCameraPosition.z + portraitFactor * 4.5
+      );
+    }
+    
     camera.updateProjectionMatrix();
     controls.minDistance = 3 + portraitFactor * 0.5;
     controls.maxDistance = 50 + portraitFactor * 5;
@@ -1607,7 +1638,8 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
     renderer.setSize(safeWidth, safeHeight, false);
     const aspect = safeWidth / safeHeight;
     camera.aspect = aspect;
-    adjustCameraForViewport(aspect);
+    const currentIsMobile = safeWidth <= 768;
+    adjustCameraForViewport(aspect, currentIsMobile);
     const targetPixelRatio = resolvePixelRatio(aspect);
     if (Math.abs(renderer.getPixelRatio() - targetPixelRatio) > 0.01) {
       renderer.setPixelRatio(targetPixelRatio);
