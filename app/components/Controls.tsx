@@ -15,20 +15,15 @@ interface ControlsProps {
   onPauseChange: (paused: boolean) => void;
 }
 
-// Speed presets: years per second (logarithmic scale)
 const SPEED_PRESETS = [
-  { label: '1x', value: 1 },           // 1 year/sec
-  { label: '10x', value: 10 },         // 10 years/sec
-  { label: '1 cycle', value: 11 },      // 11 years/sec (1 solar cycle per second)
-  { label: '100x', value: 100 },       // 100 years/sec
-  { label: '1K', value: 1000 },        // 1000 years/sec
-  { label: '10K', value: 10000 },      // 10,000 years/sec
-  { label: '100K', value: 100000 },    // 100,000 years/sec
+  { label: '1 Earth Year', shortLabel: '1 yr', value: 1 },
+  { label: '1 Solar Cycle', shortLabel: '1 cycle', value: 11 },
+  { label: '100 Solar Cycles', shortLabel: '100 cycles', value: 1100 },
+  { label: '100K Solar Cycles', shortLabel: '100K cycles', value: 1100000 },
 ];
 
-// Logarithmic time range: 0.001 years to 1 million years
 const MIN_LOG_YEARS = 0.001;
-const MAX_LOG_YEARS = 1000000;
+const MAX_LOG_YEARS = 1500000;
 
 export default function Controls({
   heroRef,
@@ -38,7 +33,7 @@ export default function Controls({
   onPauseChange,
 }: ControlsProps) {
   const [year, setYear] = useState(2024.0);
-  const [speedIndex, setSpeedIndex] = useState(2); // Start at 1 solar cycle per second (11 years/sec)
+  const [speedIndex, setSpeedIndex] = useState(1);
   const [direction, setDirection] = useState<Direction>(1);
   const [paused, setPaused] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
@@ -47,15 +42,19 @@ export default function Controls({
   const currentYearRef = useRef(2024.0);
   const targetYearRef = useRef(2024.0);
   const animationFrameRef = useRef<number | null>(null);
-  
-  // Logarithmic slider value (0-1)
-  const [logSliderValue, setLogSliderValue] = useState(yearToLinear(2024.0, MIN_LOG_YEARS, MAX_LOG_YEARS));
+
+  const [logSliderValue, setLogSliderValue] = useState(
+    yearToLinear(2024.0, MIN_LOG_YEARS, MAX_LOG_YEARS),
+  );
 
   const speed = SPEED_PRESETS[speedIndex].value;
 
   useEffect(() => {
-    setAnnouncement(`Year: ${Math.floor(year)}. Speed: ${speed} years/sec.`);
-  }, [year, speed]);
+    const preset = SPEED_PRESETS[speedIndex];
+    setAnnouncement(
+      `Year: ${Math.floor(year)}. Speed: ${preset.label} (${speed.toLocaleString()} years/sec).`,
+    );
+  }, [year, speed, speedIndex]);
 
   useEffect(() => {
     const systemReduced = getPrefersReducedMotion();
@@ -101,37 +100,29 @@ export default function Controls({
         const dt = (currentTime - lastFrameTime) / 1000;
         lastFrameTime = currentTime;
 
-        // Smooth seek to target if user scrubbed
         const current = currentYearRef.current;
         const target = targetYearRef.current;
         let finalYear: number;
-        
+
         if (Math.abs(current - target) > 0.01) {
-          // Smooth interpolation to target year
           const alpha = Math.min(0.15, dt * 5);
           finalYear = current + (target - current) * alpha;
           currentYearRef.current = finalYear;
           setYear(finalYear);
           onTimeChange(finalYear);
         } else {
-          // Auto-advance time at selected speed (years per second)
-          // speed is in years/sec, dt is in seconds
-          finalYear = current + (speed * dt * direction);
-          
-          // Clamp to valid range
+          finalYear = current + speed * dt * direction;
           finalYear = Math.max(MIN_LOG_YEARS, Math.min(MAX_LOG_YEARS, finalYear));
-          
+
           currentYearRef.current = finalYear;
           targetYearRef.current = finalYear;
           setYear(finalYear);
-          
-          // Update slider position to match
+
           const newLogValue = yearToLinear(finalYear, MIN_LOG_YEARS, MAX_LOG_YEARS);
           setLogSliderValue(newLogValue);
           onTimeChange(finalYear);
         }
-        
-        // Update scene
+
         heroRef.current?.updateScene(finalYear, direction, true);
       } catch (error) {
         console.error('Error in animation loop:', error);
@@ -172,14 +163,17 @@ export default function Controls({
 
   const handleSpeedChange = (newIndex: number) => {
     setSpeedIndex(newIndex);
-    setAnnouncement(`Speed: ${SPEED_PRESETS[newIndex].label} (${SPEED_PRESETS[newIndex].value} years/sec)`);
+    const preset = SPEED_PRESETS[newIndex];
+    setAnnouncement(
+      `Speed: ${preset.label} (${preset.value.toLocaleString()} years/sec).`,
+    );
   };
 
   const handleDirectionToggle = () => {
     const newDirection = direction === 1 ? -1 : 1;
     setDirection(newDirection);
     onDirectionChange(newDirection);
-    setAnnouncement(`Direction: ${newDirection === 1 ? 'Forward' : 'Reverse'}`);
+    setAnnouncement(`Direction: ${newDirection === 1 ? 'Forward' : 'Reverse'}.`);
     heroRef.current?.updateScene(currentYearRef.current, newDirection, !reduceMotion && !paused);
   };
 
@@ -216,21 +210,19 @@ export default function Controls({
   const motionDisabled = reduceMotion || paused;
 
   return (
-    <>
-      {/* Controls - Mobile: Vertical Stack | Desktop: Horizontal Layout */}
-      <div 
-        className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-1 flex-1 min-w-0"
-        role="region"
-        aria-label="Simulation controls">
-        
-        {/* Logarithmic Time Slider - Mobile: Full Width */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-1 flex-1 min-w-0 w-full sm:w-auto">
+    <div
+      className="flex flex-col gap-3"
+      role="region"
+      aria-label="Simulation controls"
+    >
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+        <div className="flex flex-col gap-1 sm:flex-1">
           <label
             htmlFor="year-slider"
-            className="flex items-center gap-1 text-[0.65rem] sm:text-[0.4rem] lg:text-[0.5rem] uppercase tracking-[0.2em] text-white/60 whitespace-nowrap flex-shrink-0"
+            className="flex items-center justify-between text-[0.65rem] uppercase tracking-[0.25em] text-white/60 sm:text-[0.5rem]"
           >
-            <span>Time:</span>
-            <span className="font-mono text-white/80 text-[0.75rem] sm:text-[0.5rem] lg:text-[0.55rem] tracking-normal">
+            <span>Time</span>
+            <span className="ml-3 font-mono text-white/80 tracking-normal">
               {formatLogTime(yearsToSeconds(year))}
             </span>
           </label>
@@ -247,91 +239,71 @@ export default function Controls({
             disabled={motionDisabled}
             aria-label="Time (logarithmic scale)"
             title="Scrub through time (logarithmic scale)"
-            className="flex-1 h-2 sm:h-1.5 bg-white/20 rounded-lg appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-white/50 min-w-0 touch-none"
+            className="h-1.5 w-full appearance-none rounded-full bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
             style={{
               background: `linear-gradient(to right, #ffffff 0%, #ffffff ${logSliderValue * 100}%, rgba(255, 255, 255, 0.2) ${logSliderValue * 100}%, rgba(255, 255, 255, 0.2) 100%)`,
             }}
           />
         </div>
 
-        {/* Divider - Hidden on mobile */}
-        <div className="hidden sm:block h-3 w-px bg-white/20 flex-shrink-0"></div>
-
-        {/* Speed Controls - Mobile: Vertical Stack */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-0.5 flex-shrink-0">
-          <span className="text-[0.65rem] sm:text-[0.4rem] lg:text-[0.5rem] uppercase tracking-[0.2em] text-white/60 whitespace-nowrap">
-            Speed:
-          </span>
-          <div className="flex flex-wrap items-center gap-1 sm:gap-0.5">
-            {SPEED_PRESETS.map((preset, index) => (
-              <button
-                key={index}
-                onClick={() => handleSpeedChange(index)}
-                disabled={motionDisabled}
-                aria-label={`Set speed to ${preset.label}`}
-                title={`${preset.value} years per second`}
-                className={`min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 px-2 py-2 sm:px-1 sm:py-0.5 text-[0.75rem] sm:text-[0.5rem] lg:text-[0.55rem] text-white border rounded transition-colors ${
-                  speedIndex === index
-                    ? 'bg-white/30 border-white/40'
-                    : 'bg-white/10 border-white/20 hover:bg-white/20 active:bg-white/25'
-                } disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-white/50`}
-              >
-                {preset.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Divider - Hidden on mobile */}
-        <div className="hidden sm:block h-3 w-px bg-white/20 flex-shrink-0"></div>
-
-        {/* Direction and Control Buttons - Mobile: Horizontal Row */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-0.5 flex-shrink-0">
-          <span className="text-[0.65rem] sm:text-[0.4rem] lg:text-[0.5rem] uppercase tracking-[0.2em] text-white/60 whitespace-nowrap">
-            Transport:
-          </span>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={handleDirectionToggle}
-              disabled={motionDisabled}
-              aria-label="Switch travel direction"
-              title="Switch travel direction"
-              className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 px-2 py-2 sm:px-1 sm:py-0.5 text-[0.875rem] sm:text-[0.55rem] text-white bg-white/10 border border-white/20 rounded hover:bg-white/20 active:bg-white/25 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-white/50 transition-colors"
-            >
-              {direction === 1 ? '▶' : '◀'}
-            </button>
-
-            <button
-              onClick={handlePauseToggle}
-              disabled={reduceMotion}
-              aria-label={paused ? 'Resume' : 'Pause'}
-              title={paused ? 'Resume' : 'Pause'}
-              className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 px-2 py-2 sm:px-1 sm:py-0.5 text-[0.875rem] sm:text-[0.55rem] text-white bg-white/10 border border-white/20 rounded hover:bg-white/20 active:bg-white/25 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-white/50 transition-colors"
-            >
-              {paused ? '▶' : '⏸'}
-            </button>
-
-            <button
-              onClick={handleReduceMotionToggle}
-              disabled={getPrefersReducedMotion()}
-              aria-label="Disable background motion"
-              title={reduceMotion ? 'Motion off' : 'Disable background motion'}
-              className="min-h-[44px] sm:min-h-0 px-2 py-2 sm:px-1 sm:py-0.5 text-[0.65rem] sm:text-[0.5rem] text-white bg-white/10 border border-white/20 rounded hover:bg-white/20 active:bg-white/25 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-white/50 transition-colors"
-            >
-              {reduceMotion ? 'Motion off' : 'Reduce'}
-            </button>
-          </div>
-        </div>
-
-        {/* Aria-live announcements */}
-        <div
-          aria-live="polite"
-          aria-atomic="true"
-          className="sr-only"
-        >
-          {announcement}
+        <div className="flex items-center gap-1.5 sm:ml-auto">
+          <button
+            onClick={handleDirectionToggle}
+            disabled={motionDisabled}
+            aria-label="Switch travel direction"
+            title="Switch travel direction"
+            className="rounded border border-white/20 bg-white/10 px-2 py-1 text-sm text-white transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/40 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {direction === 1 ? '▶' : '◀'}
+          </button>
+          <button
+            onClick={handlePauseToggle}
+            disabled={reduceMotion}
+            aria-label={paused ? 'Resume' : 'Pause'}
+            title={paused ? 'Resume' : 'Pause'}
+            className="rounded border border-white/20 bg-white/10 px-2 py-1 text-sm text-white transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/40 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {paused ? '▶' : '⏸'}
+          </button>
+          <button
+            onClick={handleReduceMotionToggle}
+            disabled={getPrefersReducedMotion()}
+            aria-label="Disable background motion"
+            title={reduceMotion ? 'Motion off' : 'Disable background motion'}
+            className="rounded border border-white/20 bg-white/10 px-2 py-1 text-[0.65rem] text-white transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/40 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {reduceMotion ? 'Motion off' : 'Reduce'}
+          </button>
         </div>
       </div>
-    </>
+
+      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+        <span className="text-[0.6rem] uppercase tracking-[0.3em] text-white/60 sm:text-[0.5rem]">
+          Speed
+        </span>
+        <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
+          {SPEED_PRESETS.map((preset, index) => (
+            <button
+              key={preset.label}
+              onClick={() => handleSpeedChange(index)}
+              disabled={motionDisabled}
+              aria-label={`Set speed to ${preset.label}`}
+              title={`${preset.label} (${preset.value.toLocaleString()} years/sec)`}
+              className={`rounded-full border px-2 py-1 text-[0.65rem] text-white transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 disabled:cursor-not-allowed disabled:opacity-50 ${
+                speedIndex === index
+                  ? 'border-white/40 bg-white/25'
+                  : 'border-white/20 bg-white/10 hover:bg-white/20'
+              }`}
+            >
+              {preset.shortLabel}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {announcement}
+      </div>
+    </div>
   );
 }

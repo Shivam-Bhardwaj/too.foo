@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Controls from './Controls';
 import LayerControl from './LayerControl';
 import { HeroRef } from './Hero';
@@ -30,13 +30,14 @@ export default function Header({
   onPauseChange,
 }: HeaderProps) {
   const [utcTime, setUtcTime] = useState('');
-  const [showDetails, setShowDetails] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [gitInfo, setGitInfo] = useState({
-    commit: process.env.NEXT_PUBLIC_GIT_COMMIT || 'local',
-    branch: process.env.NEXT_PUBLIC_GIT_BRANCH || 'main',
-    timestamp: process.env.NEXT_PUBLIC_BUILD_TIME || new Date().toISOString(),
-  });
+  const gitInfo = useMemo(
+    () => ({
+      commit: process.env.NEXT_PUBLIC_GIT_COMMIT || 'local',
+      branch: process.env.NEXT_PUBLIC_GIT_BRANCH || 'main',
+      timestamp: process.env.NEXT_PUBLIC_BUILD_TIME || new Date().toISOString(),
+    }),
+    [],
+  );
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -53,7 +54,7 @@ export default function Header({
       const days = Math.floor(fraction * 365.25);
       const date = new Date(wholeYear, 0, 1);
       date.setDate(date.getDate() + days);
-      
+
       const y = date.getFullYear();
       const m = String(date.getMonth() + 1).padStart(2, '0');
       const d = String(date.getDate()).padStart(2, '0');
@@ -83,37 +84,19 @@ export default function Header({
   return (
     <header
       className="fixed inset-x-0 top-0 z-30 pointer-events-none"
-      style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.25rem)' }}
+      style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)' }}
     >
-      <div className="px-2 sm:px-2 lg:px-3">
-        <div className="w-full">
-          {/* Mobile: Collapsed Header (Minimal) */}
-          {isCollapsed ? (
-            <button
-              onClick={() => setIsCollapsed(false)}
-              className="sm:hidden rounded-lg border border-white/10 bg-black/65 backdrop-blur px-2 py-1.5 pointer-events-auto min-h-[44px] text-white/80 hover:text-white transition-colors"
-              aria-label="Expand header"
-            >
-              <div className="flex items-center gap-1.5">
-                <svg width="20" height="20" viewBox="0 0 100 100" className="w-4 h-4">
-                  <circle cx="50" cy="50" r="20" fill="#FDB813" opacity="0.8" />
-                </svg>
-                <span className="text-[0.65rem] font-mono">{formatDate(currentYear)}</span>
-                <span className="text-[0.5rem] text-emerald-200/80">▼</span>
-              </div>
-            </button>
-          ) : (
-            /* Mobile-First Header Panel */
-            <div className="rounded-lg sm:rounded-xl lg:rounded-2xl border border-white/10 bg-black/65 backdrop-blur px-2 py-2 sm:px-3 sm:py-1.5 pointer-events-auto">
-              {/* Mobile: Vertical Stack | Desktop: Horizontal Layout */}
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-1 lg:gap-1.5">
-                {/* Title Section - Always visible */}
-                <div className="flex items-center gap-1.5 sm:gap-1 flex-shrink-0">
+      <div className="px-3 sm:px-4 lg:px-6">
+        <div className="mx-auto max-w-6xl">
+          <div className="pointer-events-auto rounded-2xl border border-white/10 bg-black/70 backdrop-blur-md px-3 py-3 sm:px-4 sm:py-4">
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+                <div className="flex items-center gap-2 text-white">
                   <svg
                     width="32"
                     height="32"
                     viewBox="0 0 100 100"
-                    className="w-5 h-5 sm:w-4 sm:h-4 lg:w-5 lg:h-5"
+                    className="h-7 w-7 sm:h-6 sm:w-6"
                     aria-label="Solar icon"
                   >
                     <defs>
@@ -130,13 +113,7 @@ export default function Header({
                         </feMerge>
                       </filter>
                     </defs>
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="20"
-                      fill="url(#sunGradient)"
-                      filter="url(#glow)"
-                    />
+                    <circle cx="50" cy="50" r="20" fill="url(#sunGradient)" filter="url(#glow)" />
                     {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => {
                       const rad = (angle * Math.PI) / 180;
                       const x1 = 50 + Math.cos(rad) * 25;
@@ -158,97 +135,66 @@ export default function Header({
                       );
                     })}
                   </svg>
-                  <div className="flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-1">
-                    <p className="text-[0.5rem] sm:text-[0.4rem] uppercase tracking-[0.3em] text-emerald-300/70 leading-tight">
+                  <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-2">
+                    <p className="text-[0.55rem] uppercase tracking-[0.35em] text-emerald-300/60">
                       too.foo mission
                     </p>
-                    <p className="text-sm sm:text-xs lg:text-sm font-light leading-tight">
-                      Solar Memory Console
-                    </p>
-                  </div>
-                </div>
-                
-                {/* Mobile: Collapsible Details | Desktop: Always Visible */}
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-1 lg:gap-1.5 flex-1 min-w-0">
-                  {/* Mission Stats */}
-                  <div className="flex flex-wrap items-center gap-1 sm:gap-0.5 lg:gap-1 flex-shrink-0">
-                    {MISSION_STATS.map((stat) => (
-                      <div
-                        key={stat.label}
-                        className="flex items-center gap-1 rounded border border-white/10 bg-white/5 px-1.5 py-1 sm:px-1 sm:py-0.5"
-                      >
-                        <span className="text-[0.5rem] sm:text-[0.3rem] lg:text-[0.35rem] uppercase tracking-wider text-white/50">
-                          {stat.label}:
-                        </span>
-                        <span className="font-mono text-[0.65rem] sm:text-[0.5rem] lg:text-[0.55rem] text-white/80 leading-tight">
-                          {stat.value}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  {/* UTC Time & Solar Date - Mobile: Stacked | Desktop: Inline */}
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-1 lg:gap-1.5 flex-shrink-0">
-                    <div className="text-[0.65rem] sm:text-[0.4rem] lg:text-[0.5rem] font-mono text-emerald-200/80">
-                      UTC · {utcTime}
-                    </div>
-                    
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-[0.5rem] sm:text-[0.35rem] lg:text-[0.4rem] uppercase tracking-wider text-white/60">
-                        Solar Date:
-                      </span>
-                      <span className="text-sm sm:text-xs lg:text-sm font-mono font-light text-white/90">
-                        {formatDate(currentYear)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Git Info - Mobile: Collapsible | Desktop: Always Visible */}
-                  <div className={`${showDetails ? 'flex' : 'hidden'} sm:flex items-center gap-1 text-[0.5rem] sm:text-[0.35rem] lg:text-[0.4rem] text-white/40 sm:ml-auto flex-shrink-0 flex-wrap`}>
-                    <span className="uppercase tracking-wider">BRANCH:</span>
-                    <span className="font-mono text-white/60">{gitInfo.branch}</span>
-                    <span className="text-white/20">•</span>
-                    <span className="uppercase tracking-wider">COMMIT:</span>
-                    <span className="font-mono text-white/60">{formatCommitHash(gitInfo.commit)}</span>
-                    <span className="text-white/20">•</span>
-                    <span className="uppercase tracking-wider">BUILT:</span>
-                    <span className="font-mono text-white/60">{formatBuildTime(gitInfo.timestamp)}</span>
+                    <p className="text-base font-light sm:text-sm">Solar Memory Console</p>
                   </div>
                 </div>
 
-                {/* Mobile: Toggle Details Button */}
-                <button
-                  onClick={() => setShowDetails(!showDetails)}
-                  className="sm:hidden px-2 py-1.5 text-[0.65rem] text-white/60 hover:text-white/80 border border-white/10 rounded transition-colors flex-shrink-0"
-                  aria-label={showDetails ? 'Hide details' : 'Show details'}
-                >
-                  {showDetails ? '−' : '+'}
-                </button>
+                <div className="hidden flex-1 flex-wrap items-center gap-1.5 text-[0.55rem] uppercase tracking-[0.3em] text-white/50 sm:flex sm:justify-end">
+                  {MISSION_STATS.map((stat) => (
+                    <span key={stat.label} className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-1 text-white/70">
+                      <span>{stat.label}</span>
+                      <span className="font-mono text-white/80">{stat.value}</span>
+                    </span>
+                  ))}
+                </div>
+
+                <div className="sm:ml-auto hidden flex-col gap-0.5 text-right font-mono text-[0.6rem] text-emerald-200/80 sm:flex">
+                  <span>UTC · {utcTime || '—'}</span>
+                  <span className="text-white/60">Solar Date · {formatDate(currentYear)}</span>
+                </div>
               </div>
 
-              {/* Controls Section - Mobile: Stacked | Desktop: Inline */}
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-1 mt-2 sm:mt-0.5 pt-2 sm:pt-0.5 border-t border-white/10">
-                <div className="flex items-center justify-between w-full sm:w-auto">
-                  <LayerControl heroRef={heroRef} />
-                  {/* Mobile: Collapse Button */}
-                  <button
-                    onClick={() => setIsCollapsed(true)}
-                    className="sm:hidden px-2 py-1.5 text-[0.65rem] text-white/60 hover:text-white/80 border border-white/10 rounded transition-colors flex-shrink-0"
-                    aria-label="Minimize header"
-                  >
-                    ▲
-                  </button>
+              <div className="flex flex-wrap items-center gap-1.5 sm:hidden">
+                {MISSION_STATS.map((stat) => (
+                  <span key={stat.label} className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[0.55rem] text-white/70">
+                    <span className="uppercase tracking-[0.25em] text-white/50">{stat.label}</span>
+                    <span className="font-mono text-white/80">{stat.value}</span>
+                  </span>
+                ))}
+              </div>
+
+              <div className="flex flex-col gap-1 text-[0.6rem] font-mono text-emerald-200/80 sm:hidden">
+                <span>UTC · {utcTime || '—'}</span>
+                <span className="text-white/60">Solar Date · {formatDate(currentYear)}</span>
+              </div>
+
+              <Controls
+                heroRef={heroRef}
+                onTimeChange={onTimeChange}
+                onDirectionChange={onDirectionChange}
+                onMotionChange={onMotionChange}
+                onPauseChange={onPauseChange}
+              />
+
+              <div className="flex flex-wrap items-center gap-2 border-t border-white/10 pt-2 sm:items-center sm:gap-3 sm:pt-3">
+                <LayerControl heroRef={heroRef} />
+                <div className="flex flex-wrap items-center gap-1 text-[0.5rem] uppercase tracking-[0.25em] text-white/40 sm:ml-auto">
+                  <span>Branch</span>
+                  <span className="font-mono text-white/60">{gitInfo.branch}</span>
+                  <span className="text-white/20">•</span>
+                  <span>Commit</span>
+                  <span className="font-mono text-white/60">{formatCommitHash(gitInfo.commit)}</span>
+                  <span className="text-white/20">•</span>
+                  <span>Built</span>
+                  <span className="font-mono text-white/60">{formatBuildTime(gitInfo.timestamp)}</span>
                 </div>
-                <Controls
-                  heroRef={heroRef}
-                  onTimeChange={onTimeChange}
-                  onDirectionChange={onDirectionChange}
-                  onMotionChange={onMotionChange}
-                  onPauseChange={onPauseChange}
-                />
               </div>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </header>

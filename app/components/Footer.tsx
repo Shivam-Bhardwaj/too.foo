@@ -1,7 +1,5 @@
 'use client';
 
-import { useState } from 'react';
-
 const TECH_STACK = [
   { name: 'Next.js', version: '14.2.33', url: 'https://nextjs.org' },
   { name: 'React', version: '18.3.1', url: 'https://react.dev' },
@@ -13,71 +11,46 @@ const TECH_STACK = [
 ];
 
 export default function Footer() {
-  const [isCollapsed, setIsCollapsed] = useState(true); // Start collapsed on mobile
-
   return (
     <footer
       className="fixed inset-x-0 bottom-0 z-20 pointer-events-none"
-      style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.5rem)' }}
+      style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)' }}
     >
-      <div className="px-2 sm:px-4 lg:px-6">
-        <div className="max-w-6xl mx-auto">
-          {/* Mobile: Collapsed Footer (Minimal) */}
-          {isCollapsed ? (
-            <button
-              onClick={() => setIsCollapsed(false)}
-              className="sm:hidden rounded-lg border border-white/10 bg-black/55 backdrop-blur px-2 py-1 pointer-events-auto min-h-[32px] text-white/60 hover:text-white/80 transition-colors text-[0.5rem] uppercase tracking-wider"
-              aria-label="Expand footer"
-            >
-              Tech Stack ▲
-            </button>
-          ) : (
-            <div className="rounded-lg sm:rounded-xl lg:rounded-2xl border border-white/10 bg-black/55 backdrop-blur px-2 py-1.5 sm:px-4 sm:py-2.5 pointer-events-auto">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                {/* Tech Stack */}
-                <div className="flex flex-col gap-1 sm:gap-1.5">
-                  <div className="flex items-center justify-between sm:block">
-                    <span className="text-[0.6rem] sm:text-[0.45rem] lg:text-[0.5rem] uppercase tracking-[0.35em] text-white/40">
-                      Tech Stack
-                    </span>
-                    {/* Mobile: Collapse Button */}
-                    <button
-                      onClick={() => setIsCollapsed(true)}
-                      className="sm:hidden px-1 py-0.5 text-[0.5rem] text-white/60 hover:text-white/80 border border-white/10 rounded transition-colors"
-                      aria-label="Minimize footer"
+      <div className="px-3 sm:px-4 lg:px-6">
+        <div className="mx-auto max-w-6xl">
+          <div className="pointer-events-auto rounded-2xl border border-white/10 bg-black/55 backdrop-blur px-3 py-2 sm:px-4 sm:py-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+              <div className="flex flex-col gap-1">
+                <span className="text-[0.5rem] uppercase tracking-[0.35em] text-white/40">
+                  Tech Stack
+                </span>
+                <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                  {TECH_STACK.map((tech) => (
+                    <a
+                      key={tech.name}
+                      href={tech.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group inline-flex items-baseline gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-white/70 transition-colors hover:border-white/20 hover:bg-white/15 hover:text-white"
+                      title={`${tech.name} v${tech.version}`}
                     >
-                      ▼
-                    </button>
-                  </div>
-                  <div className="flex flex-wrap gap-1 sm:gap-1.5 lg:gap-2">
-                    {TECH_STACK.map((tech) => (
-                      <a
-                        key={tech.name}
-                        href={tech.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="group flex items-baseline gap-1 px-2 py-1 sm:px-2.5 sm:py-1 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 active:bg-white/15 transition-colors min-h-[44px] sm:min-h-0"
-                        title={`${tech.name} v${tech.version}`}
-                      >
-                        <span className="text-[0.7rem] sm:text-[0.6rem] lg:text-[0.65rem] text-white/70 group-hover:text-white/90">
-                          {tech.name}
-                        </span>
-                        <span className="text-[0.6rem] sm:text-[0.5rem] lg:text-[0.55rem] font-mono text-white/40 group-hover:text-white/60">
-                          {tech.version}
-                        </span>
-                      </a>
-                    ))}
-                  </div>
-                </div>
-
-                {/* License */}
-                <div className="text-[0.6rem] sm:text-[0.45rem] lg:text-[0.5rem] uppercase tracking-[0.3em] text-white/30 text-center sm:text-right">
-                  <div>AGPL-3.0-or-later</div>
-                  <div>TooFoo Continuum License v0.1</div>
+                      <span className="text-[0.6rem] font-medium group-hover:text-white">
+                        {tech.name}
+                      </span>
+                      <span className="font-mono text-[0.5rem] text-white/40 group-hover:text-white/60">
+                        {tech.version}
+                      </span>
+                    </a>
+                  ))}
                 </div>
               </div>
+
+              <div className="text-[0.5rem] uppercase tracking-[0.3em] text-white/30 sm:text-right">
+                <div>AGPL-3.0-or-later</div>
+                <div>TooFoo Continuum License v0.1</div>
+              </div>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </footer>
