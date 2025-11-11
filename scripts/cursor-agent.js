@@ -56,8 +56,38 @@ function getMainRepoPath() {
   }
 }
 
+async function findExistingIssue(title) {
+  const sanitizedTitle = title.replace(/"/g, '\\"');
+  const query = `repo:${REPO_OWNER}/${REPO_NAME} is:issue is:open in:title "${sanitizedTitle}"`;
+
+  try {
+    const { data } = await octokit.rest.search.issuesAndPullRequests({ q: query });
+    const match = data.items.find((item) => item.title === title && item.state === 'open');
+
+    if (match) {
+      const issue = await octokit.rest.issues.get({
+        owner: REPO_OWNER,
+        repo: REPO_NAME,
+        issue_number: match.number,
+      });
+      console.log(`🔄 Reusing existing issue: #${issue.data.number}`);
+      console.log(`   ${issue.data.html_url}`);
+      return issue.data;
+    }
+  } catch (error) {
+    console.warn('⚠️  Failed to search for existing issues:', error.message);
+  }
+
+  return null;
+}
+
 async function createIssue(title, description) {
   try {
+    const existing = await findExistingIssue(title);
+    if (existing) {
+      return existing;
+    }
+
     const issue = await octokit.rest.issues.create({
       owner: REPO_OWNER,
       repo: REPO_NAME,
