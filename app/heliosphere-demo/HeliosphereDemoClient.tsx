@@ -35,10 +35,13 @@ export default function HeliosphereDemoClient() {
     }
 
     let mounted = true;
-    let animationFrameId: number;
+    let animationFrameId: number | null = null;
     let lastTime = performance.now();
     let frameCount = 0;
     let fpsTime = 0;
+    
+    // Mark that we're starting initialization
+    isInitializingRef.current = true;
 
     const initScene = async () => {
       try {
@@ -59,6 +62,7 @@ export default function HeliosphereDemoClient() {
         if (!mounted) {
           console.log('[Demo] Component unmounted during initialization, disposing...');
           sceneAPI.dispose();
+          isInitializingRef.current = false;
           return;
         }
 
@@ -69,6 +73,7 @@ export default function HeliosphereDemoClient() {
         }
 
         sceneRef.current = sceneAPI;
+        isInitializingRef.current = false;
         setIsInitialized(true);
         setError(null);
         setStatus('✅ Scene running');
@@ -100,6 +105,7 @@ export default function HeliosphereDemoClient() {
         animate();
       } catch (err) {
         console.error('[Demo] Failed to initialize scene:', err);
+        isInitializingRef.current = false;
         setError(err instanceof Error ? err.message : 'Unknown error');
       }
     };
@@ -118,25 +124,32 @@ export default function HeliosphereDemoClient() {
     handleResize(); // Initial size
 
     return () => {
-      console.log('[Demo] Cleanup: Component unmounting');
+      console.log('[Demo] Cleanup: Component unmounting, mounted=', mounted, 'isInitializing=', isInitializingRef.current, 'isInitialized=', isInitialized);
       mounted = false;
       window.removeEventListener('resize', handleResize);
       
       if (animationFrameId) {
         cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
       }
       
-      // Only dispose if we're actually unmounting (not just React Strict Mode remount)
-      // React Strict Mode causes double-mount in dev, but we should keep the scene
-      if (sceneRef.current && !isInitialized) {
-        console.log('[Demo] Cleanup: Disposing scene');
+      // Only dispose if initialization completed AND we're actually unmounting
+      // Don't dispose during React Strict Mode cleanup (which happens before init completes)
+      // In Strict Mode, cleanup runs before async init completes, so isInitializingRef.current will be true
+      if (sceneRef.current && !isInitializingRef.current && isInitialized) {
+        console.log('[Demo] Cleanup: Disposing scene (real unmount)');
         sceneRef.current.dispose();
         sceneRef.current = null;
+        setIsInitialized(false);
+      } else if (isInitializingRef.current) {
+        console.log('[Demo] Cleanup: Skipping disposal (initialization in progress, likely Strict Mode)');
+        // Reset the flag so next mount can initialize
+        isInitializingRef.current = false;
       } else {
-        console.log('[Demo] Cleanup: Skipping disposal (React Strict Mode remount)');
+        console.log('[Demo] Cleanup: Skipping disposal (scene not initialized or Strict Mode remount)');
       }
     };
-  }, [isInitialized, isMounted]);
+  }, [isMounted]); // Remove isInitialized from dependencies to prevent re-running
 
   // Toggle validation overlays
   const handleToggleValidation = () => {
