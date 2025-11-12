@@ -76,14 +76,9 @@ export async function createSunCentricScene(
     const metadata = loader.getMetadata();
     console.log('[SunCentricScene] Dataset time units:', metadata.units.time);
     
-    // If dataset uses GyrSinceZAMS, convert current time
-    if (metadata.units.time === 'GyrSinceZAMS') {
-      // Present day is ~4.6 Gyr since ZAMS
-      const presentDayGyr = 4.6;
-      const presentDayMyr = Units.MyrSinceZAMS(presentDayGyr * 1000);
-      registry.setTime(presentDayMyr);
-      console.log('[SunCentricScene] Set registry time to present day (4.6 Gyr since ZAMS)');
-    }
+    // If dataset uses GyrSinceZAMS, we'll convert when loading
+    // Registry stays in JulianDate for consistency
+    console.log('[SunCentricScene] Dataset uses time units:', metadata.units.time);
   } catch (error) {
     console.warn('[SunCentricScene] Dataset not found, using fallback parameters');
     // Will use fallback parameters in loader
