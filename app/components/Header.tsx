@@ -85,6 +85,7 @@ export default function Header({
     <header
       className="fixed inset-x-0 top-0 z-30 pointer-events-none"
       style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)' }}
+      role="banner"
     >
       <div className="px-3 sm:px-4 lg:px-6">
         <div className="mx-auto max-w-6xl">
@@ -97,7 +98,8 @@ export default function Header({
                     height="32"
                     viewBox="0 0 100 100"
                     className="h-7 w-7 sm:h-6 sm:w-6"
-                    aria-label="Solar icon"
+                    aria-hidden="true"
+                    role="img"
                   >
                     <defs>
                       <radialGradient id="sunGradient" cx="50%" cy="50%" r="50%">
@@ -139,7 +141,7 @@ export default function Header({
                     <p className="text-[0.55rem] uppercase tracking-[0.35em] text-emerald-300/60">
                       too.foo mission
                     </p>
-                    <p className="text-base font-light sm:text-sm">Solar Memory Console</p>
+                    <h2 className="text-base font-light sm:text-sm">Solar Memory Console</h2>
                   </div>
                 </div>
 

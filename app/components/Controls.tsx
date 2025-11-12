@@ -38,6 +38,7 @@ export default function Controls({
   const [paused, setPaused] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
   const [announcement, setAnnouncement] = useState('');
+  const [errorAnnouncement, setErrorAnnouncement] = useState('');
   const sliderRef = useRef<HTMLInputElement>(null);
   const currentYearRef = useRef(2024.0);
   const targetYearRef = useRef(2024.0);
@@ -83,6 +84,8 @@ export default function Controls({
         heroRef.current?.updateScene(currentYearRef.current, direction, false);
       } catch (error) {
         console.error('Error updating scene on pause:', error);
+        setErrorAnnouncement('Error updating scene. Please try again.');
+        setTimeout(() => setErrorAnnouncement(''), 5000);
       }
       return;
     }
@@ -126,6 +129,8 @@ export default function Controls({
         heroRef.current?.updateScene(finalYear, direction, true);
       } catch (error) {
         console.error('Error in animation loop:', error);
+        setErrorAnnouncement('Animation error occurred. The visualization may not update correctly.');
+        setTimeout(() => setErrorAnnouncement(''), 5000);
         isRunning = false;
         if (animationFrameRef.current) {
           cancelAnimationFrame(animationFrameRef.current);
@@ -186,6 +191,8 @@ export default function Controls({
       heroRef.current?.updateScene(currentYearRef.current, direction, !reduceMotion && !newPaused);
     } catch (error) {
       console.error('Error updating scene on pause', error);
+      setErrorAnnouncement('Error updating scene. Please try again.');
+      setTimeout(() => setErrorAnnouncement(''), 5000);
     }
   };
 
@@ -250,20 +257,22 @@ export default function Controls({
           <button
             onClick={handleDirectionToggle}
             disabled={motionDisabled}
-            aria-label="Switch travel direction"
-            title="Switch travel direction"
+            aria-label={direction === 1 ? 'Switch to reverse direction' : 'Switch to forward direction'}
+            title={direction === 1 ? 'Switch to reverse direction' : 'Switch to forward direction'}
             className="rounded border border-white/20 bg-white/10 px-2 py-1 text-sm text-white transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/40 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {direction === 1 ? '▶' : '◀'}
+            <span aria-hidden="true">{direction === 1 ? '▶' : '◀'}</span>
+            <span className="sr-only">{direction === 1 ? 'Forward' : 'Reverse'}</span>
           </button>
           <button
             onClick={handlePauseToggle}
             disabled={reduceMotion}
-            aria-label={paused ? 'Resume' : 'Pause'}
-            title={paused ? 'Resume' : 'Pause'}
+            aria-label={paused ? 'Resume animation' : 'Pause animation'}
+            title={paused ? 'Resume animation' : 'Pause animation'}
             className="rounded border border-white/20 bg-white/10 px-2 py-1 text-sm text-white transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/40 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {paused ? '▶' : '⏸'}
+            <span aria-hidden="true">{paused ? '▶' : '⏸'}</span>
+            <span className="sr-only">{paused ? 'Resume' : 'Pause'}</span>
           </button>
           <button
             onClick={handleReduceMotionToggle}
@@ -303,6 +312,9 @@ export default function Controls({
 
       <div aria-live="polite" aria-atomic="true" className="sr-only">
         {announcement}
+      </div>
+      <div aria-live="assertive" aria-atomic="true" className="sr-only">
+        {errorAnnouncement}
       </div>
     </div>
   );

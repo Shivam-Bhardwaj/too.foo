@@ -26,12 +26,10 @@ export default function Home() {
           background:
             'radial-gradient(circle at center, transparent 0%, rgba(0, 0, 0, 0.2) 80%, rgba(0, 0, 0, 0.4) 100%)',
         }}
+        aria-hidden="true"
       />
 
-      <section
-        className="relative flex-1"
-        style={{ minHeight: 'var(--viewport-height, 100vh)' }}
-      >
+      <main id="main-content" className="relative flex-1" style={{ minHeight: 'var(--viewport-height, 100vh)' }}>
         <ClientWrapper />
 
         <noscript>
@@ -43,12 +41,13 @@ export default function Home() {
         </noscript>
 
         <div className="absolute inset-x-4 sm:left-1/2 sm:-translate-x-1/2 bottom-[calc(env(safe-area-inset-bottom,0px)+5rem)] sm:bottom-32 z-20 pointer-events-none">
+          <h1 className="sr-only">too.foo — Solar Memory Online</h1>
           <p className="text-base md:text-xl lg:text-2xl text-white/80 max-w-2xl mx-auto text-center drop-shadow-md">
             Uploading before GTA 6. Learning the tech and philosophy to encode our planet's DNA.
           </p>
         </div>
         <p className="sr-only">Illustrative; not to scale.</p>
-      </section>
+      </main>
     </div>
   );
 }

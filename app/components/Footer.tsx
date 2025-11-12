@@ -15,6 +15,7 @@ export default function Footer() {
     <footer
       className="fixed inset-x-0 bottom-0 z-20 pointer-events-none"
       style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)' }}
+      role="contentinfo"
     >
       <div className="px-3 sm:px-4 lg:px-6">
         <div className="mx-auto max-w-6xl">
@@ -31,8 +32,9 @@ export default function Footer() {
                       href={tech.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="group inline-flex items-baseline gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-white/70 transition-colors hover:border-white/20 hover:bg-white/15 hover:text-white"
+                      className="group inline-flex items-baseline gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-white/70 transition-colors hover:border-white/20 hover:bg-white/15 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/40"
                       title={`${tech.name} v${tech.version}`}
+                      aria-label={`${tech.name} version ${tech.version} - Opens in new tab`}
                     >
                       <span className="text-[0.6rem] font-medium group-hover:text-white">
                         {tech.name}
