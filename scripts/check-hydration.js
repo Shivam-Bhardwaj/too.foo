@@ -92,11 +92,15 @@ async function checkHydrationErrors() {
   } catch (error) {
     console.error('❌ Playwright not found. Install it with: npm install --save-dev @playwright/test');
     console.error('   Then run: npx playwright install chromium');
+    console.error('   Or skip hydration check: SKIP_HYDRATION_CHECK=1');
     process.exit(1);
   }
 
   const { chromium } = playwright;
-  const browser = await chromium.launch({ headless: true });
+  
+  // Check if browser is installed
+  try {
+    const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext();
   const page = await context.newPage();
 
@@ -155,9 +159,17 @@ async function checkHydrationErrors() {
     }
   }
 
-  await browser.close();
-
-  return { hydrationErrors, allErrors };
+    await browser.close();
+    return { hydrationErrors, allErrors };
+  } catch (error) {
+    if (error.message.includes('Executable doesn\'t exist') || error.message.includes('browserType.launch')) {
+      console.error('❌ Playwright browsers not installed.');
+      console.error('   Run: npx playwright install chromium');
+      console.error('   Or skip hydration check: SKIP_HYDRATION_CHECK=1');
+      throw error;
+    }
+    throw error;
+  }
 }
 
 async function main() {
