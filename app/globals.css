@@ -43,6 +43,16 @@ canvas {
     white-space: nowrap;
     border-width: 0;
   }
+
+  .header-below-nav {
+    top: calc(env(safe-area-inset-top, 0px) + 2.5rem);
+  }
+
+  @media (min-width: 640px) {
+    .header-below-nav {
+      top: calc(env(safe-area-inset-top, 0px) + 4rem);
+    }
+  }
 }
 
 /* Custom slider styling */
