@@ -9,15 +9,19 @@ export default function HeliosphereDemoClient() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState('Waiting for mount...');
+  // Use empty string initially to match server render
+  const [status, setStatus] = useState('');
   const [showValidation, setShowValidation] = useState(true);
-  const [fps, setFps] = useState(60);
+  // Use 0 initially to match server render (will update after mount)
+  const [fps, setFps] = useState(0);
 
   // Ensure we're on client side
   useEffect(() => {
     console.log('[Demo] Component mounted on client');
     setStatus('Component mounted');
     setIsMounted(true);
+    // Set initial FPS after mount to avoid hydration mismatch
+    setFps(60);
   }, []);
 
   // Initialize scene
@@ -181,7 +185,7 @@ export default function HeliosphereDemoClient() {
             <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-cyan-400 border-r-transparent"></div>
           </div>
           <p className="text-xl">Initializing Sun-Centric Heliosphere...</p>
-          <p className="text-sm text-gray-400 mt-2">{status}</p>
+          <p className="text-sm text-gray-400 mt-2" suppressHydrationWarning>{status}</p>
           <p className="text-xs text-gray-500 mt-1">Check console (F12) for details</p>
         </div>
       </div>
@@ -214,7 +218,7 @@ export default function HeliosphereDemoClient() {
               Dataset-driven visualization with GPU rendering
             </p>
             <div className="text-xs space-y-1 text-gray-400">
-              <div>FPS: <span className="text-cyan-400">{fps}</span></div>
+              <div suppressHydrationWarning>FPS: <span className="text-cyan-400">{fps}</span></div>
               <div>Frame: <span className="text-cyan-400">HEE_J2000</span></div>
               <div>Units: <span className="text-cyan-400">AU</span></div>
               <div>Scale: <span className="text-cyan-400">1:1</span></div>

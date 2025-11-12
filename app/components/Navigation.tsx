@@ -33,6 +33,7 @@ export default function Navigation() {
                     ? 'text-cyan-400 hover:bg-cyan-400 hover:bg-opacity-10'
                     : 'text-gray-300 hover:bg-white hover:bg-opacity-10 hover:text-white'
                 }`}
+                suppressHydrationWarning
               >
                 {link.label}
               </Link>
