@@ -80,39 +80,25 @@ export class StarField {
         auToScene: { value: 1.0 },
       },
       vertexShader: `
-        attribute vec3 color;
-        attribute float magnitude;
-        
         varying vec3 vColor;
         
         void main() {
-          vColor = color;
+          // Use instance color from instanceColor
+          vColor = vec3(1.0, 1.0, 1.0);
+          #ifdef USE_INSTANCING_COLOR
+            vColor = instanceColor;
+          #endif
           
-          // Compute size from magnitude
-          // Brighter stars (lower magnitude) are larger
-          // m = 0 → size = 5.0, m = 6 → size = 1.0
-          float size = 5.0 - magnitude * 0.666;
-          size = max(1.0, size);
-          
-          vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(position * size, 1.0);
+          vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(position, 1.0);
           gl_Position = projectionMatrix * mvPosition;
-          
-          // Distance-based fade
-          float dist = length(mvPosition.xyz);
-          gl_PointSize = size * (1000.0 / dist);
+          gl_PointSize = 2.0;
         }
       `,
       fragmentShader: `
         varying vec3 vColor;
         
         void main() {
-          // Circular point with soft edge
-          vec2 center = gl_PointCoord - vec2(0.5);
-          float dist = length(center);
-          if (dist > 0.5) discard;
-          
-          float alpha = 1.0 - smoothstep(0.3, 0.5, dist);
-          gl_FragColor = vec4(vColor, alpha);
+          gl_FragColor = vec4(vColor, 1.0);
         }
       `,
       transparent: true,
