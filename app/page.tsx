@@ -1,12 +1,23 @@
 import type { Metadata } from 'next';
 import dynamic from 'next/dynamic';
-import ClientWrapper from './components/ClientWrapper';
 
-// Navigation uses usePathname() which can cause hydration errors
-// Make it client-only to prevent SSR hydration mismatches
-const Navigation = dynamic(
-  () => import('./components/Navigation'),
-  { ssr: false }
+// Make entire page client-only to prevent all hydration errors
+// This page relies on browser APIs and client-side state
+const HomePageClient = dynamic(
+  () => import('./HomePageClient'),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="mb-4">
+            <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-cyan-400 border-r-transparent"></div>
+          </div>
+          <p className="text-xl">Loading...</p>
+        </div>
+      </div>
+    ),
+  }
 );
 
 export const metadata: Metadata = {
@@ -25,39 +36,10 @@ export const metadata: Metadata = {
   },
 };
 
+// Force dynamic rendering to prevent static generation
+// This ensures the page is not pre-rendered during build, avoiding hydration mismatches
+export const dynamic = 'force-dynamic';
+
 export default function Home() {
-  return (
-    <div className="min-h-screen bg-black text-white flex flex-col" style={{ minHeight: 'var(--viewport-height, 100vh)' }}>
-      <Navigation />
-      <div
-        className="fixed inset-0 pointer-events-none z-0"
-        style={{
-          background:
-            'radial-gradient(circle at center, transparent 0%, rgba(0, 0, 0, 0.2) 80%, rgba(0, 0, 0, 0.4) 100%)',
-        }}
-      />
-
-      <section
-        className="relative flex-1"
-        style={{ minHeight: 'var(--viewport-height, 100vh)' }}
-      >
-        <ClientWrapper />
-
-        <noscript>
-          <img
-            src="/img/heliosphere-still.png"
-            alt="Stylized, scientifically-informed heliosphere; apex direction implied."
-            className="absolute inset-0 w-full h-full object-cover opacity-50 z-0"
-          />
-        </noscript>
-
-        <div className="absolute inset-x-4 sm:left-1/2 sm:-translate-x-1/2 bottom-[calc(env(safe-area-inset-bottom,0px)+5rem)] sm:bottom-32 z-20 pointer-events-none">
-          <p className="text-base md:text-xl lg:text-2xl text-white/80 max-w-2xl mx-auto text-center drop-shadow-md">
-            Uploading before GTA 6. Learning the tech and philosophy to encode our planet's DNA.
-          </p>
-        </div>
-        <p className="sr-only">Illustrative; not to scale.</p>
-      </section>
-    </div>
-  );
+  return <HomePageClient />;
 }

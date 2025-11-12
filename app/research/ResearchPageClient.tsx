@@ -1,8 +1,19 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import Navigation from '../components/Navigation';
-import HeliosphereDemoClient from '../heliosphere-demo/HeliosphereDemoClient';
+
+// Navigation uses usePathname() which can cause hydration errors
+// Make it client-only to prevent SSR hydration mismatches
+const Navigation = dynamic(
+  () => import('../components/Navigation'),
+  { ssr: false }
+);
+
+// HeliosphereDemoClient is already client-only
+const HeliosphereDemoClient = dynamic(
+  () => import('../heliosphere-demo/HeliosphereDemoClient'),
+  { ssr: false }
+);
 
 export default function ResearchPageClient() {
   return (

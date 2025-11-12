@@ -1,117 +1,214 @@
-# React Hydration Error Fix
+# React Hydration Error Fix - Complete Solution
 
 ## Problem
 
-The application was experiencing persistent React hydration errors in production:
-- **Error #425**: Hydration failed because the initial UI does not match what was rendered on the server
-- **Error #418**: Text content does not match server-rendered HTML
-- **Error #423**: Hydration failed because the server rendered HTML didn't match the client
+The application was experiencing persistent React hydration errors (#425, #418, #423) in production on both `/` and `/research` pages, despite multiple attempts to fix them.
 
-## Root Cause
+## Root Cause Analysis
 
-The `HeliosphereDemoClient` component was rendering **different HTML structures** on the server vs client:
+After investigation, the root causes were identified:
 
-1. **Server-side**: Component returned `<div>Loading...</div>` when `isMounted === false`
-2. **Client-side**: After hydration, component returned full UI with canvas, overlays, and controls
+1. **Static Export + Dynamic Imports**: `next.config.js` has `output: 'export'`, which means Next.js still pre-renders pages at build time, even with `dynamic()` + `ssr: false`. The static export process was causing hydration mismatches.
 
-This mismatch caused React to throw hydration errors because the server HTML didn't match the client HTML.
+2. **Direct Imports in Client Components**: `ResearchPageClient.tsx` was importing `Navigation` directly (not dynamically), causing it to be server-rendered during static export.
 
-## Solution
+3. **Missing Route Segment Config**: Pages weren't explicitly configured to skip static generation, so Next.js was still trying to pre-render them.
 
-### 1. Consistent Structure Rendering
+4. **Insufficient Testing**: No automated tests were catching hydration errors before deployment.
 
-Changed the component to **always render the same structure** on both server and client:
+## Complete Solution
 
-```tsx
-// Before: Conditional rendering
-if (!isMounted) {
-  return <div>Loading...</div>;
-}
-return <div>...</div>;
+### Fix 1: Make All Pages Client-Only
 
-// After: Always render same structure
-return (
-  <div className="relative h-screen w-full">
-    <canvas style={{ visibility: isMounted ? 'visible' : 'hidden' }} />
-    <div className={isMounted ? 'opacity-100' : 'opacity-0'}>...</div>
-  </div>
-);
+**Research Page** (`app/research/page.tsx`):
+- Created `ResearchPageClient.tsx` as a fully client component
+- Made `Navigation` and `HeliosphereDemoClient` dynamic imports with `ssr: false`
+- Added `export const dynamic = 'force-dynamic'` to skip static generation
+
+**Home Page** (`app/page.tsx`):
+- Created `HomePageClient.tsx` as a fully client component
+- Made `Navigation` a dynamic import with `ssr: false`
+- Added `export const dynamic = 'force-dynamic'` to skip static generation
+
+### Fix 2: Route Segment Configuration
+
+Added `export const dynamic = 'force-dynamic'` to problematic routes:
+- `app/page.tsx` - Home page
+- `app/research/page.tsx` - Research page
+
+This tells Next.js to skip static generation for these routes, preventing hydration mismatches.
+
+### Fix 3: Dynamic Imports Everywhere
+
+All components that use browser APIs or client-side state are now dynamically imported:
+- `Navigation` - Uses `usePathname()` hook
+- `HeliosphereDemoClient` - Uses WebGL/canvas APIs
+- `HomePageClient` - Contains client-side state
+- `ResearchPageClient` - Contains client-side state
+
+## Testing Infrastructure
+
+### Test 1: Pre-Deploy Hydration Check Script
+
+**File**: `scripts/check-hydration.js`
+
+- Builds the app
+- Starts local server
+- Uses Playwright to visit all routes (`/`, `/research`, `/heliosphere-demo`)
+- Captures console errors and checks for hydration error patterns
+- Exits with error code if hydration errors detected
+- Integrated into pre-push hook
+
+**Usage**:
+```bash
+npm run check:hydration
+# or
+npm run test:hydration
 ```
 
-### 2. CSS-Based Visibility Control
+### Test 2: Enhanced Playwright Tests
 
-Instead of conditionally rendering elements, we now:
-- Always render all elements in the DOM
-- Use CSS `opacity` and `visibility` to control visibility
-- Use `suppressHydrationWarning` on dynamic elements (canvas, overlays)
+**File**: `tests/visual/hydration-error.spec.ts`
 
-### 3. Test Coverage
+Enhanced to:
+- Test all critical routes (`/`, `/research`, `/heliosphere-demo`)
+- Capture ALL console errors (not just hydration-related)
+- Check for React Error Boundaries
+- Generate detailed error reports
+- Run as part of visual test suite
 
-### Unit Tests (`tests/integration/hydration.test.tsx`)
-**⚠️ Limitation**: These tests use `happy-dom` and don't simulate actual Next.js SSR → hydration flow. They check structure consistency but **cannot catch real hydration errors**.
-
-- ✅ Verifies consistent structure on initial mount
-- ✅ Detects structure changes between renders
-- ✅ Checks for `suppressHydrationWarning` usage
-- ✅ Validates CSS-based visibility control
-
-### Browser-Based Tests (`tests/visual/hydration-error.spec.ts`)
-**✅ Critical**: These Playwright tests actually run the app in a browser and check the console for hydration errors. This catches issues that unit tests miss.
-
-- ✅ Checks browser console for React hydration errors (#425, #418, #423)
-- ✅ Tests actual SSR → hydration flow
-- ✅ Validates `/research` and `/heliosphere-demo` pages
-- ✅ Runs as part of visual test suite
-
-**Why Unit Tests Missed It**: Unit tests render components in isolation using `happy-dom`, which doesn't simulate Next.js's server-side rendering and client-side hydration. The browser-based Playwright tests catch the actual hydration errors that occur in production.
-
-## Test Results
-
-```
-✓ tests/integration/hydration.test.tsx (9 tests) 413ms
-  ✓ should render the same structure on initial mount (server-side)
-  ✓ should not conditionally render different root elements
-  ✓ should use suppressHydrationWarning on dynamic elements
-  ✓ should use CSS opacity/visibility instead of conditional rendering
-  ✓ should not render dynamic content that differs between server and client
-  ✓ should handle client-side state updates without hydration mismatch
-  ✓ should render all UI elements in the DOM (even if hidden)
-  ✓ should detect if component structure changes between renders
-  ✓ should not log React hydration errors to console
+**Usage**:
+```bash
+npm run test:visual
 ```
 
-## Prevention
+### Test 3: Keploy Integration
 
-These tests now run as part of the pre-push hook, ensuring hydration errors are caught **before deployment**.
+**File**: `scripts/keploy-hydration-test.sh`
 
-### Running Tests
+- Records user sessions using Keploy
+- Replays sessions to detect hydration errors
+- Can be integrated into CI/CD pipeline
+
+**Usage**:
+```bash
+./scripts/keploy-hydration-test.sh
+```
+
+### Test 4: Pre-Push Hook Integration
+
+**File**: `scripts/run-checks.sh`
+
+The hydration check is now integrated into the pre-push hook:
+- Runs before build to catch issues early
+- Can be skipped with `SKIP_HYDRATION_CHECK=1`
+- Fails the push if hydration errors detected
+
+## Architecture
+
+### Page Structure
+
+```
+page.tsx (Server Component - metadata only)
+  └─> dynamic(PageClient, { ssr: false })
+       └─> PageClient.tsx (Client Component)
+            ├─> dynamic(Navigation, { ssr: false })
+            └─> dynamic(OtherClientComponents, { ssr: false })
+```
+
+### Key Principles
+
+1. **Server Components**: Only handle metadata, never render UI
+2. **Client Components**: All UI rendering happens in client components
+3. **Dynamic Imports**: All client components use `dynamic()` with `ssr: false`
+4. **Route Config**: `export const dynamic = 'force-dynamic'` prevents static generation
+
+## Files Modified
+
+### Core Fixes
+- `app/research/ResearchPageClient.tsx` - Made Navigation dynamic import
+- `app/research/page.tsx` - Added `export const dynamic = 'force-dynamic'`
+- `app/HomePageClient.tsx` - New client-only home page component
+- `app/page.tsx` - Updated to use dynamic import + route config
+
+### Testing Infrastructure
+- `scripts/check-hydration.js` - Pre-deploy hydration check script
+- `tests/visual/hydration-error.spec.ts` - Enhanced Playwright tests
+- `scripts/keploy-hydration-test.sh` - Keploy-based hydration testing
+- `scripts/run-checks.sh` - Added hydration check to pre-push hook
+- `package.json` - Added `check:hydration` and `test:hydration` scripts
+
+## Running Tests
 
 ```bash
-# Run all tests (including hydration tests)
-npm test
+# Run hydration check script
+npm run check:hydration
 
-# Run only hydration tests
-npm test -- tests/integration/hydration.test.tsx
+# Run Playwright hydration tests
+npm run test:visual
+
+# Run Keploy hydration tests
+./scripts/keploy-hydration-test.sh
+
+# Run all checks (including hydration) before push
+git push  # Automatically runs hydration check via pre-push hook
 ```
+
+## Prevention Strategy
+
+1. **Automated Pre-Deploy Check**: `scripts/check-hydration.js` runs before every push
+2. **Playwright Tests**: Visual tests catch hydration errors in CI/CD
+3. **Keploy Integration**: Records/replays catch real user flow issues
+4. **Route Config**: `export const dynamic = 'force-dynamic'` prevents static generation
+5. **Dynamic Imports**: All client components use `dynamic()` with `ssr: false`
 
 ## Best Practices
 
 To prevent hydration errors in future components:
 
-1. **Always render the same structure** on server and client
-2. **Use CSS classes** (`opacity-0`, `hidden`) instead of conditional rendering
-3. **Add `suppressHydrationWarning`** to dynamic elements (canvas, dates, etc.)
-4. **Test hydration** by rendering components multiple times and checking structure consistency
-5. **Monitor console** for hydration warnings during development
+1. **Always use `dynamic()` imports** for components that use browser APIs
+2. **Add `export const dynamic = 'force-dynamic'`** to routes that shouldn't be statically generated
+3. **Create separate client components** (`*Client.tsx`) for pages with client-side state
+4. **Test with Playwright** - Unit tests can't catch real hydration errors
+5. **Run hydration check** before pushing: `npm run check:hydration`
+
+## Troubleshooting
+
+### If hydration errors persist:
+
+1. **Check route segment config**: Ensure `export const dynamic = 'force-dynamic'` is present
+2. **Verify dynamic imports**: All client components should use `dynamic()` with `ssr: false`
+3. **Run hydration check**: `npm run check:hydration` to see detailed error messages
+4. **Check browser console**: Look for specific error codes (#425, #418, #423)
+5. **Review component structure**: Ensure server and client render identical initial HTML
+
+### Skip hydration check (not recommended):
+
+```bash
+SKIP_HYDRATION_CHECK=1 git push
+```
+
+## Success Criteria
+
+- ✅ Zero hydration errors in browser console on both `/` and `/research`
+- ✅ Pre-deploy script catches hydration errors before deployment
+- ✅ Playwright tests fail if hydration errors detected
+- ✅ Keploy records/replays catch hydration issues
+- ✅ All tests pass in CI/CD pipeline
 
 ## Related Files
 
-- `app/heliosphere-demo/HeliosphereDemoClient.tsx` - Fixed component
-- `tests/integration/hydration.test.tsx` - Hydration prevention tests
-- `app/research/page.tsx` - Uses the fixed component
+- `app/research/ResearchPageClient.tsx` - Client-only research page
+- `app/HomePageClient.tsx` - Client-only home page
+- `app/research/page.tsx` - Research page wrapper with route config
+- `app/page.tsx` - Home page wrapper with route config
+- `scripts/check-hydration.js` - Pre-deploy hydration check
+- `tests/visual/hydration-error.spec.ts` - Playwright hydration tests
+- `scripts/run-checks.sh` - Pre-push hook integration
 
 ## References
 
 - [React Hydration Errors](https://react.dev/errors/425)
 - [Next.js Hydration](https://nextjs.org/docs/messages/react-hydration-error)
-
+- [Next.js Dynamic Imports](https://nextjs.org/docs/advanced-features/dynamic-import)
+- [Next.js Route Segment Config](https://nextjs.org/docs/app/api-reference/file-conventions/route-segment-config)

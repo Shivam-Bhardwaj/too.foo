@@ -36,6 +36,10 @@ export const metadata: Metadata = {
   },
 };
 
+// Force dynamic rendering to prevent static generation
+// This ensures the page is not pre-rendered during build, avoiding hydration mismatches
+export const dynamic = 'force-dynamic';
+
 export default function ResearchPage() {
   return <ResearchPageClient />;
 }

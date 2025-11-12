@@ -14,6 +14,8 @@
     "start:visual": "serve out -l 4173 --single",
     "test:visual": "npm run build && playwright test",
     "test:visual:update": "npm run build && playwright test --update-snapshots",
+    "check:hydration": "node scripts/check-hydration.js",
+    "test:hydration": "npm run check:hydration",
     "task": "node scripts/cursor-agent.js",
     "issue": "node scripts/work-on-issue.js",
     "merge-pr": "node scripts/merge-pr.js",

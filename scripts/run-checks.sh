@@ -19,6 +19,18 @@ fi
 echo "🧪 Running unit/integration tests..."
 npm run -s test
 
+# Hydration error check (before build to catch issues early)
+if [ "${SKIP_HYDRATION_CHECK:-0}" != "1" ]; then
+  echo "🔍 Checking for hydration errors..."
+  if ! npm run check:hydration 2>&1 | tee /tmp/hydration-check.log; then
+    echo "❌ Hydration check failed. Review errors above."
+    echo "   To skip hydration check: SKIP_HYDRATION_CHECK=1 npm run build"
+    exit 1
+  fi
+else
+  echo "ℹ️  Skipping hydration check (SKIP_HYDRATION_CHECK=1)."
+fi
+
 # Build check
 echo "🏗️  Building production bundle..."
 npm run -s build
