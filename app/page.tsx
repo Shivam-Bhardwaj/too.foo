@@ -1,6 +1,13 @@
 import type { Metadata } from 'next';
+import dynamic from 'next/dynamic';
 import ClientWrapper from './components/ClientWrapper';
-import Navigation from './components/Navigation';
+
+// Navigation uses usePathname() which can cause hydration errors
+// Make it client-only to prevent SSR hydration mismatches
+const Navigation = dynamic(
+  () => import('./components/Navigation'),
+  { ssr: false }
+);
 
 export const metadata: Metadata = {
   title: 'too.foo — Solar Memory Online',

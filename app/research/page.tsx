@@ -1,6 +1,12 @@
 import type { Metadata } from 'next';
 import dynamic from 'next/dynamic';
-import Navigation from '../components/Navigation';
+
+// Navigation uses usePathname() which can cause hydration errors
+// Make it client-only to prevent SSR hydration mismatches
+const Navigation = dynamic(
+  () => import('../components/Navigation'),
+  { ssr: false }
+);
 
 // Dynamically import with SSR disabled to prevent hydration errors
 // This component relies heavily on browser APIs (WebGL, canvas) and should not be server-rendered
