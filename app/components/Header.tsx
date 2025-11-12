@@ -91,7 +91,7 @@ export default function Header({
           <div className="pointer-events-auto rounded-xl sm:rounded-2xl border border-white/10 bg-black/70 backdrop-blur-md px-2 py-1.5 sm:px-4 sm:py-4">
             <div className="flex flex-col gap-1.5 sm:gap-3">
               <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-4">
-                <div className="flex items-center gap-1.5 sm:gap-2 text-white">
+                <div className="flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 text-white">
                   <svg
                     width="32"
                     height="32"
@@ -158,8 +158,8 @@ export default function Header({
                 </div>
               </div>
 
-              {/* Compact UTC/Date on mobile - single line */}
-              <div className="flex items-center gap-2 text-[0.55rem] font-mono text-emerald-200/80 sm:hidden">
+              {/* Compact UTC/Date on mobile - centered */}
+              <div className="flex items-center justify-center gap-2 text-[0.55rem] font-mono text-emerald-200/80 sm:hidden">
                 <span className="text-white/60">{formatDate(currentYear)}</span>
                 <span className="text-white/30">·</span>
                 <span className="text-white/70">{utcTime ? new Date(utcTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '—'}</span>
@@ -173,7 +173,7 @@ export default function Header({
                 onPauseChange={onPauseChange}
               />
 
-              <div className="flex flex-wrap items-center gap-1.5 border-t border-white/10 pt-1.5 sm:items-center sm:gap-3 sm:pt-3">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 border-t border-white/10 pt-1.5 sm:items-center sm:gap-3 sm:pt-3">
                 <LayerControl heroRef={heroRef} />
                 {/* Hide git info on mobile to save space */}
                 <div className="hidden sm:flex flex-wrap items-center gap-1 text-[0.5rem] uppercase tracking-[0.25em] text-white/40 sm:ml-auto">

@@ -246,7 +246,7 @@ export default function Controls({
           />
         </div>
 
-        <div className="flex items-center gap-1 sm:gap-1.5 sm:ml-auto">
+        <div className="flex items-center justify-center gap-1 sm:gap-1.5 sm:ml-auto">
           <button
             onClick={handleDirectionToggle}
             disabled={motionDisabled}
@@ -277,11 +277,11 @@ export default function Controls({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+      <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1 sm:gap-2">
         <span className="text-[0.55rem] uppercase tracking-[0.25em] text-white/60 sm:text-[0.5rem] sm:tracking-[0.3em]">
           Speed
         </span>
-        <div className="flex flex-wrap items-center gap-0.5 sm:gap-1.5">
+        <div className="flex flex-wrap items-center justify-center gap-0.5 sm:gap-1.5">
           {SPEED_PRESETS.map((preset, index) => (
             <button
               key={preset.label}
