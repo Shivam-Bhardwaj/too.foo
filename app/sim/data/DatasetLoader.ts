@@ -114,7 +114,7 @@ export class DatasetLoader {
     // Load epoch array (time axis)
     // In real implementation, this would load from Zarr
     // For now, use a simple JSON fallback
-    const epochPath = this.metadata.time_axis.epoch_file || 'time/epochs.json';
+    const epochPath = this.metadata?.time_axis?.epoch_file || 'time/epochs.json';
     const epochResponse = await fetch(`${this.baseUrl}/${epochPath}`);
     if (!epochResponse.ok) {
       throw new Error(`Failed to load epochs: ${epochResponse.statusText}`);
