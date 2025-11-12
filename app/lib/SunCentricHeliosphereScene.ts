@@ -71,13 +71,38 @@ export async function createSunCentricScene(
   try {
     await loader.initialize();
     console.log('[SunCentricScene] Dataset loaded');
+    
+    // Get metadata to check time units
+    const metadata = loader.getMetadata();
+    console.log('[SunCentricScene] Dataset time units:', metadata.units.time);
+    
+    // If dataset uses GyrSinceZAMS, convert current time
+    if (metadata.units.time === 'GyrSinceZAMS') {
+      // Present day is ~4.6 Gyr since ZAMS
+      const presentDayGyr = 4.6;
+      const presentDayMyr = Units.MyrSinceZAMS(presentDayGyr * 1000);
+      registry.setTime(presentDayMyr);
+      console.log('[SunCentricScene] Set registry time to present day (4.6 Gyr since ZAMS)');
+    }
   } catch (error) {
     console.warn('[SunCentricScene] Dataset not found, using fallback parameters');
     // Will use fallback parameters in loader
   }
 
   // ===== Load Initial Parameters =====
-  const params = await loader.loadParametersAt(registry.getTime());
+  // Convert registry time to dataset time format
+  const registryTime = registry.getTime();
+  const metadata = loader.getMetadata();
+  
+  let datasetTime: JulianDate | MyrSinceZAMS | number;
+  if (metadata?.units?.time === 'GyrSinceZAMS') {
+    // Use present day: 4.6 Gyr since ZAMS
+    datasetTime = 4.6;
+  } else {
+    datasetTime = registryTime;
+  }
+  
+  const params = await loader.loadParametersAt(datasetTime);
 
   console.log('[SunCentricScene] Heliosphere parameters:', {
     R_HP_nose: `${params.R_HP_nose} AU`,

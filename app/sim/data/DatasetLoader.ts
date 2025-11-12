@@ -15,7 +15,7 @@ export interface DatasetMetadata {
   units: {
     distance: 'AU';
     velocity: 'km/s';
-    time: 'JulianDate' | 'MyrSinceZAMS';
+    time: 'JulianDate' | 'MyrSinceZAMS' | 'GyrSinceZAMS';
   };
   provenance: {
     solar_model: string;
@@ -138,12 +138,19 @@ export class DatasetLoader {
    * Find closest epoch indices for interpolation
    * @returns [index0, index1, alpha] where alpha is interpolation factor
    */
-  findEpochBracket(time: JulianDate | MyrSinceZAMS): [number, number, number] {
+  findEpochBracket(time: JulianDate | MyrSinceZAMS | number): [number, number, number] {
     if (!this.epochs) {
       throw new Error('Dataset not initialized');
     }
 
-    const t = time as number;
+    // Handle GyrSinceZAMS (convert to Myr for comparison)
+    let t: number;
+    if (this.metadata?.units?.time === 'GyrSinceZAMS') {
+      // If time is in Gyr, convert to same units as epochs array
+      t = typeof time === 'number' ? time : (time as number);
+    } else {
+      t = time as number;
+    }
     const n = this.epochs.length;
 
     // Handle edge cases
@@ -274,7 +281,7 @@ export class DatasetLoader {
   /**
    * Load and interpolate parameters for a given time
    */
-  async loadParametersAt(time: JulianDate | MyrSinceZAMS): Promise<HeliosphereParameters> {
+  async loadParametersAt(time: JulianDate | MyrSinceZAMS | number): Promise<HeliosphereParameters> {
     const [i0, i1, alpha] = this.findEpochBracket(time);
 
     // Load both epochs
