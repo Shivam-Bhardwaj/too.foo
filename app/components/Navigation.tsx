@@ -8,8 +8,7 @@ export default function Navigation() {
 
   const links = [
     { href: '/', label: 'Home' },
-    { href: '/research', label: 'Research' },
-    { href: '/heliosphere-demo', label: '☀️ Sun-Centric Demo', highlight: true },
+    { href: '/research', label: 'Research', highlight: true },
   ];
 
   return (
