@@ -199,12 +199,12 @@ export default function LayerControl({ heroRef }: LayerControlProps) {
     >
       <button
         onClick={() => setIsOpen((prev) => !prev)}
-        className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[0.65rem] uppercase tracking-[0.25em] text-white transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/40"
+        className="inline-flex items-center gap-1 sm:gap-2 rounded-full border border-white/20 bg-white/10 px-2 py-0.5 sm:px-3 sm:py-1 text-[0.55rem] sm:text-[0.65rem] uppercase tracking-[0.2em] sm:tracking-[0.25em] text-white transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/40"
         aria-expanded={isOpen}
         aria-label="Toggle layer visibility menu"
       >
         Layers
-        <span className="rounded-full border border-white/10 bg-black/30 px-2 py-0.5 font-mono text-[0.65rem] text-white/80">
+        <span className="rounded-full border border-white/10 bg-black/30 px-1.5 py-0.5 sm:px-2 font-mono text-[0.55rem] sm:text-[0.65rem] text-white/80">
           {activeCount}/{totalCount}
         </span>
       </button>

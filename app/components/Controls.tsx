@@ -211,18 +211,18 @@ export default function Controls({
 
   return (
     <div
-      className="flex flex-col gap-3"
+      className="flex flex-col gap-1.5 sm:gap-3"
       role="region"
       aria-label="Simulation controls"
     >
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-        <div className="flex flex-col gap-1 sm:flex-1">
+      <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+        <div className="flex flex-col gap-0.5 sm:flex-1 sm:gap-1">
           <label
             htmlFor="year-slider"
-            className="flex items-center justify-between text-[0.65rem] uppercase tracking-[0.25em] text-white/60 sm:text-[0.5rem]"
+            className="flex items-center justify-between text-[0.6rem] uppercase tracking-[0.2em] text-white/60 sm:text-[0.5rem] sm:tracking-[0.25em]"
           >
             <span>Time</span>
-            <span className="ml-3 font-mono text-white/80 tracking-normal">
+            <span className="ml-2 font-mono text-white/80 tracking-normal text-[0.55rem] sm:text-[0.6rem]">
               {formatLogTime(yearsToSeconds(year))}
             </span>
           </label>
@@ -239,20 +239,20 @@ export default function Controls({
             disabled={motionDisabled}
             aria-label="Time (logarithmic scale)"
             title="Scrub through time (logarithmic scale)"
-            className="h-1.5 w-full appearance-none rounded-full bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
+            className="h-1 sm:h-1.5 w-full appearance-none rounded-full bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
             style={{
               background: `linear-gradient(to right, #ffffff 0%, #ffffff ${logSliderValue * 100}%, rgba(255, 255, 255, 0.2) ${logSliderValue * 100}%, rgba(255, 255, 255, 0.2) 100%)`,
             }}
           />
         </div>
 
-        <div className="flex items-center gap-1.5 sm:ml-auto">
+        <div className="flex items-center gap-1 sm:gap-1.5 sm:ml-auto">
           <button
             onClick={handleDirectionToggle}
             disabled={motionDisabled}
             aria-label="Switch travel direction"
             title="Switch travel direction"
-            className="rounded border border-white/20 bg-white/10 px-2 py-1 text-sm text-white transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/40 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded border border-white/20 bg-white/10 px-1.5 py-0.5 text-xs sm:px-2 sm:py-1 sm:text-sm text-white transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/40 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {direction === 1 ? '▶' : '◀'}
           </button>
@@ -261,7 +261,7 @@ export default function Controls({
             disabled={reduceMotion}
             aria-label={paused ? 'Resume' : 'Pause'}
             title={paused ? 'Resume' : 'Pause'}
-            className="rounded border border-white/20 bg-white/10 px-2 py-1 text-sm text-white transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/40 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded border border-white/20 bg-white/10 px-1.5 py-0.5 text-xs sm:px-2 sm:py-1 sm:text-sm text-white transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/40 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {paused ? '▶' : '⏸'}
           </button>
@@ -270,18 +270,18 @@ export default function Controls({
             disabled={getPrefersReducedMotion()}
             aria-label="Disable background motion"
             title={reduceMotion ? 'Motion off' : 'Disable background motion'}
-            className="rounded border border-white/20 bg-white/10 px-2 py-1 text-[0.65rem] text-white transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/40 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded border border-white/20 bg-white/10 px-1.5 py-0.5 text-[0.55rem] sm:px-2 sm:py-1 sm:text-[0.65rem] text-white transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/40 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {reduceMotion ? 'Motion off' : 'Reduce'}
           </button>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-        <span className="text-[0.6rem] uppercase tracking-[0.3em] text-white/60 sm:text-[0.5rem]">
+      <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+        <span className="text-[0.55rem] uppercase tracking-[0.25em] text-white/60 sm:text-[0.5rem] sm:tracking-[0.3em]">
           Speed
         </span>
-        <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
+        <div className="flex flex-wrap items-center gap-0.5 sm:gap-1.5">
           {SPEED_PRESETS.map((preset, index) => (
             <button
               key={preset.label}
@@ -289,7 +289,7 @@ export default function Controls({
               disabled={motionDisabled}
               aria-label={`Set speed to ${preset.label}`}
               title={`${preset.label} (${preset.value.toLocaleString()} years/sec)`}
-              className={`rounded-full border px-2 py-1 text-[0.65rem] text-white transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 disabled:cursor-not-allowed disabled:opacity-50 ${
+              className={`rounded-full border px-1.5 py-0.5 text-[0.55rem] sm:px-2 sm:py-1 sm:text-[0.65rem] text-white transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 disabled:cursor-not-allowed disabled:opacity-50 ${
                 speedIndex === index
                   ? 'border-white/40 bg-white/25'
                   : 'border-white/20 bg-white/10 hover:bg-white/20'

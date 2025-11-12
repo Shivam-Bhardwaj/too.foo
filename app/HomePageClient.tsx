@@ -36,8 +36,8 @@ export default function HomePageClient() {
           />
         </noscript>
 
-        <div className="absolute inset-x-4 sm:left-1/2 sm:-translate-x-1/2 bottom-[calc(env(safe-area-inset-bottom,0px)+5rem)] sm:bottom-32 z-20 pointer-events-none">
-          <p className="text-base md:text-xl lg:text-2xl text-white/80 max-w-2xl mx-auto text-center drop-shadow-md">
+        <div className="absolute inset-x-4 sm:left-1/2 sm:-translate-x-1/2 bottom-[calc(env(safe-area-inset-bottom,0px)+3.5rem)] sm:bottom-32 z-20 pointer-events-none">
+          <p className="text-sm sm:text-base md:text-xl lg:text-2xl text-white/80 max-w-2xl mx-auto text-center drop-shadow-md">
             Uploading before GTA 6. Learning the tech and philosophy to encode our planet's DNA.
           </p>
         </div>
