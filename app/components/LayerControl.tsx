@@ -259,7 +259,7 @@ export default function LayerControl({ heroRef }: LayerControlProps) {
             className="fixed inset-0 z-40 bg-black/80 backdrop-blur"
             onClick={() => setIsOpen(false)}
           />
-          <div className="fixed inset-x-2 top-[calc(env(safe-area-inset-top,0px)+8rem)] bottom-[calc(env(safe-area-inset-bottom,0px)+4rem)] z-50 flex flex-col rounded-xl border border-white/20 bg-black/95 shadow-2xl">
+          <div className="fixed inset-x-4 top-[calc(env(safe-area-inset-top,0px)+1rem)] bottom-[calc(env(safe-area-inset-bottom,0px)+1rem)] z-50 flex flex-col rounded-2xl border border-white/20 bg-black/90 shadow-2xl">
             <div className="flex-shrink-0 flex items-center justify-between border-b border-white/10 px-3 py-2">
               <h3 className="text-sm font-semibold text-white">Layer Controls</h3>
               <button
