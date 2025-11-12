@@ -9,14 +9,13 @@ import {
   getRegistry,
   getDatasetLoader,
   Units,
-  HeliosphereSurface,
   StarField,
   GPUParticleSystem,
   ValidationOverlays,
   ValidationTests,
-  type Registry,
-  type DatasetLoader,
 } from '@/app/sim';
+import { HeliosphereSurface } from '@/app/sim/physics/HeliosphereSurface';
+import type { Registry, DatasetLoader } from '@/app/sim';
 
 export interface SunCentricSceneAPI {
   canvas: HTMLCanvasElement;
