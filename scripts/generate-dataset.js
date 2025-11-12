@@ -70,11 +70,21 @@ const noseDirection = [-0.93, -0.26, 0.26]; // Simplified HEE_J2000
 
 // Calculate heliopause radius
 function computeHeliopauseRadius(SW_Mdot, SW_v, ISM_rho, ISM_v) {
+  // Normalize to present-day values
+  // Present day: SW_Mdot = 1.0, SW_v = 400 km/s, ISM_rho = 0.1, ISM_v = 26.3 km/s
+  const SW_ram_present = 1.0 * 400 * 400; // 160000
+  const ISM_ram_present = 0.1 * 26.3 * 26.3; // ~69.17
+  const R_HP_present = 121.0; // AU (Voyager 1 crossing)
+  
+  // Current ram pressures
   const SW_ram = SW_Mdot * SW_v * SW_v;
   const ISM_ram = ISM_rho * ISM_v * ISM_v;
-  const R_HP_present = 121.0; // AU
   
-  const R_HP = R_HP_present * Math.sqrt(SW_ram / ISM_ram);
+  // Scale from present day: R_HP ∝ sqrt(SW_ram / ISM_ram)
+  // But normalize so present day = R_HP_present
+  const ram_ratio = (SW_ram / ISM_ram) / (SW_ram_present / ISM_ram_present);
+  const R_HP = R_HP_present * Math.sqrt(ram_ratio);
+  
   return Math.max(10.0, Math.min(2000.0, R_HP));
 }
 
