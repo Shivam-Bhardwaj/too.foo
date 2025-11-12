@@ -16,6 +16,7 @@ import {
 } from '@/app/sim';
 import { HeliosphereSurface } from '@/app/sim/physics/HeliosphereSurface';
 import type { Registry, DatasetLoader } from '@/app/sim';
+import type { JulianDate, MyrSinceZAMS } from '@/app/sim/types/units';
 
 export interface SunCentricSceneAPI {
   canvas: HTMLCanvasElement;
