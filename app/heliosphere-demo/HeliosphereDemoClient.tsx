@@ -153,58 +153,60 @@ export default function HeliosphereDemoClient() {
     }
   };
 
-  // Don't render until mounted (client-side)
-  if (!isMounted) {
-    return (
-      <div className="relative h-screen w-full bg-black flex items-center justify-center">
-        <div className="text-white text-xl">Loading...</div>
-      </div>
-    );
-  }
-
+  // Always render the same structure to prevent hydration mismatches
+  // Use CSS visibility/opacity to control what's shown before mount
   return (
     <div className="relative h-screen w-full">
-      {/* Canvas */}
+      {/* Canvas - always rendered, but only visible after mount */}
       <canvas
         ref={canvasRef}
         className="absolute inset-0 w-full h-full"
-        style={{ touchAction: 'none' }}
+        style={{ 
+          touchAction: 'none',
+          visibility: isMounted ? 'visible' : 'hidden',
+          opacity: isMounted ? 1 : 0,
+        }}
         suppressHydrationWarning
       />
 
-      {/* Loading overlay */}
-      {!isInitialized && !error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-80 text-white">
-          <div className="text-center">
-            <div className="mb-4">
-              <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-cyan-400 border-r-transparent"></div>
-            </div>
-            <p className="text-xl">Initializing Sun-Centric Heliosphere...</p>
-            <p className="text-sm text-gray-400 mt-2">{status}</p>
-            <p className="text-xs text-gray-500 mt-1">Check console (F12) for details</p>
+      {/* Loading overlay - always rendered to prevent hydration mismatch */}
+      <div 
+        className={`absolute inset-0 flex items-center justify-center bg-black bg-opacity-80 text-white transition-opacity ${
+          (!isMounted || (!isInitialized && !error)) ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+        suppressHydrationWarning
+      >
+        <div className="text-center">
+          <div className="mb-4">
+            <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-cyan-400 border-r-transparent"></div>
           </div>
+          <p className="text-xl">Initializing Sun-Centric Heliosphere...</p>
+          <p className="text-sm text-gray-400 mt-2">{status}</p>
+          <p className="text-xs text-gray-500 mt-1">Check console (F12) for details</p>
         </div>
-      )}
+      </div>
 
-      {/* Error overlay */}
-      {error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-90 text-white p-8">
-          <div className="max-w-lg text-center">
-            <h2 className="text-2xl font-bold text-red-400 mb-4">⚠️ Initialization Error</h2>
-            <p className="text-gray-300 mb-4">{error}</p>
-            <p className="text-sm text-gray-400">
-              Note: Dataset may not be generated yet. Run:
-              <code className="block mt-2 p-2 bg-gray-800 rounded">
-                python backend/precompute/generate_dataset.py
-              </code>
-            </p>
-          </div>
+      {/* Error overlay - always rendered to prevent hydration mismatch */}
+      <div 
+        className={`absolute inset-0 flex items-center justify-center bg-black bg-opacity-90 text-white p-8 transition-opacity ${
+          error ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+        suppressHydrationWarning
+      >
+        <div className="max-w-lg text-center">
+          <h2 className="text-2xl font-bold text-red-400 mb-4">⚠️ Initialization Error</h2>
+          <p className="text-gray-300 mb-4">{error || ''}</p>
+          <p className="text-sm text-gray-400">
+            Note: Dataset may not be generated yet. Run:
+            <code className="block mt-2 p-2 bg-gray-800 rounded">
+              python backend/precompute/generate_dataset.py
+            </code>
+          </p>
         </div>
-      )}
+      </div>
 
-      {/* Controls UI */}
-      {isInitialized && (
-        <>
+      {/* Controls UI - always rendered to prevent hydration mismatch */}
+      <div className={isInitialized ? 'opacity-100' : 'opacity-0 pointer-events-none'}>
           {/* Info panel */}
           <div className="absolute top-4 left-4 bg-black bg-opacity-70 text-white p-4 rounded-lg backdrop-blur-sm">
             <h1 className="text-xl font-bold mb-2">☀️ Sun-Centric Heliosphere</h1>
@@ -320,8 +322,7 @@ export default function HeliosphereDemoClient() {
               📖 Architecture Docs →
             </a>
           </div>
-        </>
-      )}
+      </div>
     </div>
   );
 }
