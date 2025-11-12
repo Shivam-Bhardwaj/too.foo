@@ -1,19 +1,33 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { createSunCentricScene, type SunCentricSceneAPI } from '@/app/lib/SunCentricHeliosphereScene';
+import dynamic from 'next/dynamic';
+
+// Lazy load the scene creator to avoid SSR issues
+const createSunCentricScene = dynamic(
+  () => import('@/app/lib/SunCentricHeliosphereScene').then(mod => ({ default: mod.createSunCentricScene })),
+  { ssr: false }
+) as any;
+
+import type { SunCentricSceneAPI } from '@/app/lib/SunCentricHeliosphereScene';
 
 export default function HeliosphereDemoClient() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneRef = useRef<SunCentricSceneAPI | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showValidation, setShowValidation] = useState(true);
   const [fps, setFps] = useState(60);
 
+  // Ensure we're on client side
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   // Initialize scene
   useEffect(() => {
-    if (!canvasRef.current || isInitialized) return;
+    if (!isMounted || !canvasRef.current || isInitialized) return;
 
     let mounted = true;
     let animationFrameId: number;
@@ -24,7 +38,10 @@ export default function HeliosphereDemoClient() {
     const initScene = async () => {
       try {
         console.log('[Demo] Initializing Sun-centric scene...');
-        const sceneAPI = await createSunCentricScene(canvasRef.current!);
+        
+        // Dynamic import to ensure client-side only
+        const { createSunCentricScene: createScene } = await import('@/app/lib/SunCentricHeliosphereScene');
+        const sceneAPI = await createScene(canvasRef.current!);
         
         if (!mounted) {
           sceneAPI.dispose();
@@ -92,7 +109,7 @@ export default function HeliosphereDemoClient() {
         sceneRef.current = null;
       }
     };
-  }, [isInitialized]);
+  }, [isInitialized, isMounted]);
 
   // Toggle validation overlays
   const handleToggleValidation = () => {
@@ -113,6 +130,15 @@ export default function HeliosphereDemoClient() {
     }
   };
 
+  // Don't render until mounted (client-side)
+  if (!isMounted) {
+    return (
+      <div className="relative h-screen w-full bg-black flex items-center justify-center">
+        <div className="text-white text-xl">Loading...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative h-screen w-full">
       {/* Canvas */}
@@ -120,6 +146,7 @@ export default function HeliosphereDemoClient() {
         ref={canvasRef}
         className="absolute inset-0 w-full h-full"
         style={{ touchAction: 'none' }}
+        suppressHydrationWarning
       />
 
       {/* Loading overlay */}
