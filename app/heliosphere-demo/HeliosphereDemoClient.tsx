@@ -1,14 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import dynamic from 'next/dynamic';
-
-// Lazy load the scene creator to avoid SSR issues
-const createSunCentricScene = dynamic(
-  () => import('@/app/lib/SunCentricHeliosphereScene').then(mod => ({ default: mod.createSunCentricScene })),
-  { ssr: false }
-) as any;
-
 import type { SunCentricSceneAPI } from '@/app/lib/SunCentricHeliosphereScene';
 
 export default function HeliosphereDemoClient() {
