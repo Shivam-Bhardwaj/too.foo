@@ -47,13 +47,23 @@ Instead of conditionally rendering elements, we now:
 
 ### 3. Test Coverage
 
-Added comprehensive hydration tests (`tests/integration/hydration.test.tsx`):
+### Unit Tests (`tests/integration/hydration.test.tsx`)
+**⚠️ Limitation**: These tests use `happy-dom` and don't simulate actual Next.js SSR → hydration flow. They check structure consistency but **cannot catch real hydration errors**.
 
 - ✅ Verifies consistent structure on initial mount
 - ✅ Detects structure changes between renders
 - ✅ Checks for `suppressHydrationWarning` usage
 - ✅ Validates CSS-based visibility control
-- ✅ Catches hydration error console warnings
+
+### Browser-Based Tests (`tests/visual/hydration-error.spec.ts`)
+**✅ Critical**: These Playwright tests actually run the app in a browser and check the console for hydration errors. This catches issues that unit tests miss.
+
+- ✅ Checks browser console for React hydration errors (#425, #418, #423)
+- ✅ Tests actual SSR → hydration flow
+- ✅ Validates `/research` and `/heliosphere-demo` pages
+- ✅ Runs as part of visual test suite
+
+**Why Unit Tests Missed It**: Unit tests render components in isolation using `happy-dom`, which doesn't simulate Next.js's server-side rendering and client-side hydration. The browser-based Playwright tests catch the actual hydration errors that occur in production.
 
 ## Test Results
 
