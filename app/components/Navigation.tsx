@@ -1,10 +1,20 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 export default function Navigation() {
   const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
+
+  // Only use pathname after mount to prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Use empty string during SSR to match initial client render
+  const currentPathname = mounted ? pathname : '';
 
   const links = [
     { href: '/', label: 'Home' },
@@ -27,7 +37,7 @@ export default function Navigation() {
                 key={link.href}
                 href={link.href}
                 className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  pathname === link.href
+                  currentPathname === link.href
                     ? 'bg-white bg-opacity-20 text-white'
                     : link.highlight
                     ? 'text-cyan-400 hover:bg-cyan-400 hover:bg-opacity-10'
