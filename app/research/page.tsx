@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import ResearchGradeClientWrapper from '../components/ResearchGradeClientWrapper';
 import ResearchDateDisplay from '../components/ResearchDateDisplay';
+import Navigation from '../components/Navigation';
 
 export const metadata: Metadata = {
   title: 'Heliosphere Research Visualization — Scientific Accuracy',
@@ -21,6 +22,7 @@ export const metadata: Metadata = {
 export default function ResearchPage() {
   return (
     <main className="min-h-screen bg-black text-white flex flex-col">
+      <Navigation />
       {/* 1. Header */}
       <header className="flex-shrink-0 py-4 px-4 text-center border-b border-white/10">
         <h1 className="text-2xl font-bold text-white/90">

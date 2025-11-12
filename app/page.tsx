@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import ClientWrapper from './components/ClientWrapper';
+import Navigation from './components/Navigation';
 
 export const metadata: Metadata = {
   title: 'too.foo — Solar Memory Online',
@@ -20,6 +21,7 @@ export const metadata: Metadata = {
 export default function Home() {
   return (
     <div className="min-h-screen bg-black text-white flex flex-col" style={{ minHeight: 'var(--viewport-height, 100vh)' }}>
+      <Navigation />
       <div
         className="fixed inset-0 pointer-events-none z-0"
         style={{
