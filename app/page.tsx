@@ -36,10 +36,9 @@ export const metadata: Metadata = {
   },
 };
 
-// Force dynamic rendering to prevent static generation
-// This ensures the page is not pre-rendered during build, avoiding hydration mismatches
-export const dynamic = 'force-dynamic';
-
+// Note: With static export (output: 'export'), we can't use 'export const dynamic'
+// Instead, we rely on dynamic() imports with ssr: false to prevent SSR
+// The page will be statically generated as an empty shell that loads client components
 export default function Home() {
   return <HomePageClient />;
 }

@@ -30,13 +30,11 @@ After investigation, the root causes were identified:
 - Made `Navigation` a dynamic import with `ssr: false`
 - Added `export const dynamic = 'force-dynamic'` to skip static generation
 
-### Fix 2: Route Segment Configuration
+### Fix 2: Client-Only Page Architecture
 
-Added `export const dynamic = 'force-dynamic'` to problematic routes:
-- `app/page.tsx` - Home page
-- `app/research/page.tsx` - Research page
+**Note**: With static export (`output: 'export'`), we cannot use `export const dynamic = 'force-dynamic'` as it's not supported. Instead, we rely entirely on `dynamic()` imports with `ssr: false`.
 
-This tells Next.js to skip static generation for these routes, preventing hydration mismatches.
+The pages are statically generated as empty HTML shells that load client components, preventing any server-side rendering that could cause hydration mismatches.
 
 ### Fix 3: Dynamic Imports Everywhere
 
@@ -167,10 +165,11 @@ git push  # Automatically runs hydration check via pre-push hook
 To prevent hydration errors in future components:
 
 1. **Always use `dynamic()` imports** for components that use browser APIs
-2. **Add `export const dynamic = 'force-dynamic'`** to routes that shouldn't be statically generated
-3. **Create separate client components** (`*Client.tsx`) for pages with client-side state
+2. **Create separate client components** (`*Client.tsx`) for pages with client-side state
+3. **Use `ssr: false`** on all dynamic imports for browser-dependent components
 4. **Test with Playwright** - Unit tests can't catch real hydration errors
 5. **Run hydration check** before pushing: `npm run check:hydration`
+6. **Note**: With static export, `export const dynamic = 'force-dynamic'` is not supported - rely on `dynamic()` imports instead
 
 ## Troubleshooting
 
