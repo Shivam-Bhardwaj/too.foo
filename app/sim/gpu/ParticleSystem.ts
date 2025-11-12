@@ -273,8 +273,6 @@ export class GPUParticleSystem {
         uniform float sizeEnd;
         uniform float lifetime;
         
-        attribute vec2 uv;
-        
         varying vec4 vColor;
         varying float vAlpha;
         
