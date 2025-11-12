@@ -50,6 +50,28 @@ async function buildApp() {
 
 async function startServer() {
   console.log('🚀 Starting local server...');
+  
+  // Check if server is already running
+  const http = require('http');
+  const checkExisting = await new Promise((resolve) => {
+    const req = http.get('http://127.0.0.1:4173', (res) => {
+      resolve(true); // Server already running
+    });
+    req.on('error', () => {
+      resolve(false); // Server not running
+    });
+    req.setTimeout(2000, () => {
+      req.destroy();
+      resolve(false);
+    });
+    req.end();
+  });
+
+  if (checkExisting) {
+    console.log('✅ Server already running\n');
+    return null; // No process to kill
+  }
+
   const serverProcess = spawn('npm', ['run', 'start:visual'], {
     stdio: 'pipe',
     cwd: process.cwd(),
@@ -57,26 +79,31 @@ async function startServer() {
   });
 
   // Wait for server to be ready
-  await new Promise((resolve) => {
-    const http = require('http');
+  await new Promise((resolve, reject) => {
+    let attempts = 0;
+    const maxAttempts = 60; // 30 seconds total (500ms * 60)
     const checkReady = setInterval(() => {
+      attempts++;
       const req = http.get('http://127.0.0.1:4173', (res) => {
         clearInterval(checkReady);
         console.log('✅ Server is ready\n');
         resolve();
       });
       req.on('error', () => {
-        // Server not ready yet, keep waiting
+        if (attempts >= maxAttempts) {
+          clearInterval(checkReady);
+          reject(new Error('Server failed to start within 30 seconds'));
+        }
+      });
+      req.setTimeout(1000, () => {
+        req.destroy();
+        if (attempts >= maxAttempts) {
+          clearInterval(checkReady);
+          reject(new Error('Server failed to start within 30 seconds'));
+        }
       });
       req.end();
     }, 500);
-    
-    // Timeout after 30 seconds
-    setTimeout(() => {
-      clearInterval(checkReady);
-      console.error('❌ Server failed to start within 30 seconds');
-      process.exit(1);
-    }, 30000);
   });
 
   return serverProcess;
@@ -204,9 +231,11 @@ async function main() {
     serverProcess.kill();
     process.exit(1);
   } finally {
-    // Clean up server
-    serverProcess.kill();
-    console.log('\n🛑 Server stopped');
+    // Clean up server (only if we started it)
+    if (serverProcess) {
+      serverProcess.kill();
+      console.log('\n🛑 Server stopped');
+    }
   }
 
   // Step 4: Report results
