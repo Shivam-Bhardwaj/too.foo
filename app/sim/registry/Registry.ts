@@ -33,9 +33,9 @@ export interface SimConfig {
 }
 
 /**
- * Heliosphere surface definition
+ * Heliosphere surface configuration
  */
-export interface HeliosphereSurface {
+export interface HeliosphereSurfaceConfig {
   name: 'heliopause' | 'termination_shock' | 'bow_shock';
   
   // Parametric function: (theta, phi, params) => radius in AU
@@ -75,7 +75,7 @@ export class Registry {
   public transforms: CoordinateTransforms;
 
   // Heliosphere surfaces
-  public surfaces: Map<string, HeliosphereSurface>;
+  public surfaces: Map<string, HeliosphereSurfaceConfig>;
 
   // Particle systems (SoA)
   public solarWindParticles: ParticleArrays;
@@ -141,14 +141,14 @@ export class Registry {
   /**
    * Add or update a heliosphere surface
    */
-  setSurface(surface: HeliosphereSurface): void {
+  setSurface(surface: HeliosphereSurfaceConfig): void {
     this.surfaces.set(surface.name, surface);
   }
 
   /**
    * Get heliosphere surface by name
    */
-  getSurface(name: string): HeliosphereSurface | undefined {
+  getSurface(name: string): HeliosphereSurfaceConfig | undefined {
     return this.surfaces.get(name);
   }
 
