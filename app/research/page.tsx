@@ -1,6 +1,25 @@
 import type { Metadata } from 'next';
-import HeliosphereDemoClient from '../heliosphere-demo/HeliosphereDemoClient';
+import dynamic from 'next/dynamic';
 import Navigation from '../components/Navigation';
+
+// Dynamically import with SSR disabled to prevent hydration errors
+// This component relies heavily on browser APIs (WebGL, canvas) and should not be server-rendered
+const HeliosphereDemoClient = dynamic(
+  () => import('../heliosphere-demo/HeliosphereDemoClient'),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="relative h-screen w-full bg-black flex items-center justify-center">
+        <div className="text-white text-center">
+          <div className="mb-4">
+            <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-cyan-400 border-r-transparent"></div>
+          </div>
+          <p className="text-xl">Loading Sun-Centric Heliosphere...</p>
+        </div>
+      </div>
+    ),
+  }
+);
 
 export const metadata: Metadata = {
   title: 'Heliosphere Research Visualization — Scientific Accuracy',
