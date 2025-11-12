@@ -9,11 +9,14 @@ export default function HeliosphereDemoClient() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState('Waiting for mount...');
   const [showValidation, setShowValidation] = useState(true);
   const [fps, setFps] = useState(60);
 
   // Ensure we're on client side
   useEffect(() => {
+    console.log('[Demo] Component mounted on client');
+    setStatus('Component mounted');
     setIsMounted(true);
   }, []);
 
@@ -29,11 +32,19 @@ export default function HeliosphereDemoClient() {
 
     const initScene = async () => {
       try {
-        console.log('[Demo] Initializing Sun-centric scene...');
+        console.log('[Demo] Step 1: Starting initialization...');
+        console.log('[Demo] Canvas element:', canvasRef.current);
+        
+        setStatus('Loading scene module...');
         
         // Dynamic import to ensure client-side only
+        console.log('[Demo] Step 2: Importing scene module...');
         const { createSunCentricScene: createScene } = await import('@/app/lib/SunCentricHeliosphereScene');
+        console.log('[Demo] Step 3: Scene module loaded, calling createScene...');
+        
+        setStatus('Creating 3D scene...');
         const sceneAPI = await createScene(canvasRef.current!);
+        console.log('[Demo] Step 4: Scene created successfully');
         
         if (!mounted) {
           sceneAPI.dispose();
@@ -43,7 +54,8 @@ export default function HeliosphereDemoClient() {
         sceneRef.current = sceneAPI;
         setIsInitialized(true);
         setError(null);
-        console.log('[Demo] Scene initialized successfully');
+        setStatus('✅ Scene running');
+        console.log('[Demo] Step 5: Scene initialized successfully, starting animation...');
 
         // Animation loop
         const animate = () => {
@@ -149,7 +161,8 @@ export default function HeliosphereDemoClient() {
               <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-cyan-400 border-r-transparent"></div>
             </div>
             <p className="text-xl">Initializing Sun-Centric Heliosphere...</p>
-            <p className="text-sm text-gray-400 mt-2">Loading dataset and GPU systems</p>
+            <p className="text-sm text-gray-400 mt-2">{status}</p>
+            <p className="text-xs text-gray-500 mt-1">Check console (F12) for details</p>
           </div>
         </div>
       )}
