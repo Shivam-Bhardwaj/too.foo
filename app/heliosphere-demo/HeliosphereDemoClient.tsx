@@ -22,7 +22,13 @@ export default function HeliosphereDemoClient() {
 
   // Initialize scene
   useEffect(() => {
-    if (!isMounted || !canvasRef.current || isInitialized) return;
+    if (!isMounted || !canvasRef.current) return;
+    
+    // Prevent double initialization (React Strict Mode)
+    if (isInitialized || sceneRef.current) {
+      console.log('[Demo] Skipping initialization - already initialized');
+      return;
+    }
 
     let mounted = true;
     let animationFrameId: number;
@@ -47,8 +53,15 @@ export default function HeliosphereDemoClient() {
         console.log('[Demo] Step 4: Scene created successfully');
         
         if (!mounted) {
+          console.log('[Demo] Component unmounted during initialization, disposing...');
           sceneAPI.dispose();
           return;
+        }
+
+        // Check if we already have a scene (React Strict Mode remount)
+        if (sceneRef.current) {
+          console.log('[Demo] Scene already exists, disposing old one');
+          sceneRef.current.dispose();
         }
 
         sceneRef.current = sceneAPI;
@@ -101,6 +114,7 @@ export default function HeliosphereDemoClient() {
     handleResize(); // Initial size
 
     return () => {
+      console.log('[Demo] Cleanup: Component unmounting');
       mounted = false;
       window.removeEventListener('resize', handleResize);
       
@@ -108,9 +122,14 @@ export default function HeliosphereDemoClient() {
         cancelAnimationFrame(animationFrameId);
       }
       
-      if (sceneRef.current) {
+      // Only dispose if we're actually unmounting (not just React Strict Mode remount)
+      // React Strict Mode causes double-mount in dev, but we should keep the scene
+      if (sceneRef.current && !isInitialized) {
+        console.log('[Demo] Cleanup: Disposing scene');
         sceneRef.current.dispose();
         sceneRef.current = null;
+      } else {
+        console.log('[Demo] Cleanup: Skipping disposal (React Strict Mode remount)');
       }
     };
   }, [isInitialized, isMounted]);
