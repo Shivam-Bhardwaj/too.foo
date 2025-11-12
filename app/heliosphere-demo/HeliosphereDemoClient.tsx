@@ -6,6 +6,7 @@ import type { SunCentricSceneAPI } from '@/app/lib/SunCentricHeliosphereScene';
 export default function HeliosphereDemoClient() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneRef = useRef<SunCentricSceneAPI | null>(null);
+  const isInitializingRef = useRef(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [error, setError] = useState<string | null>(null);
