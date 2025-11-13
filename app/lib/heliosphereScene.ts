@@ -92,10 +92,10 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
   renderer.domElement.style.willChange = 'transform';
   const scene = new THREE.Scene();
   // Deep space black - no atmospheric scattering in interstellar space
-  scene.background = new THREE.Color(0x000000);
+  scene.background = new THREE.Color(0x0a0a15); // Dark blue instead of pure black
 
   const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 3000);
-  const defaultCameraPosition = new THREE.Vector3(0, 2.2, 10);
+  const defaultCameraPosition = new THREE.Vector3(0, 6, 25); // Pull back 2.5x to show full heliosphere
   camera.position.copy(defaultCameraPosition);
   camera.lookAt(0, 0, 0);
   
@@ -121,8 +121,8 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
     controls.zoomSpeed = 0.6; // Slower zoom on mobile
   }
   
-  controls.minDistance = 3; // Don't zoom too close
-  controls.maxDistance = 50; // Don't zoom too far
+  controls.minDistance = 8; // Don't zoom too close
+  controls.maxDistance = 100; // Allow more zoom out to see full structure
   controls.target.set(0, 0, 0); // Look at heliosphere center
   controls.update();
   adjustCameraForViewport(initialAspect, isMobileViewport);
@@ -161,7 +161,7 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
   // We're viewing from a distance: heliosphere is fixed, stars stream past
   // Distribution based on Gaia catalog statistics for solar neighborhood
   const starMat = new THREE.PointsMaterial({ 
-    size: 0.018,  // Larger, more visible stars
+    size: 0.028,  // Larger for better visibility from farther camera distance
     transparent: true, 
     opacity: 1.0,
     sizeAttenuation: true,  // Stars get smaller with distance
@@ -238,7 +238,7 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
     // Create star point
     const starGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0)]);
     const starMat = new THREE.PointsMaterial({
-      size: 0.035 * (1 + (2.5 - star.magnitude) * 0.15), // Larger, brighter stars
+      size: 0.05 * (1 + (2.5 - star.magnitude) * 0.15), // Larger for visibility from distance
       color: star.color,
       transparent: true,
       opacity: 1.0,  // Fully opaque
@@ -264,17 +264,17 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
     );
     hpGeometry.scale(0.03, 0.03, 0.03); // Scale AU to scene units
     
-    // Realistic heliosphere material
+    // Realistic heliosphere material - nearly transparent surface
     const m = new THREE.MeshPhysicalMaterial({
       color: new THREE.Color(0x1a2a4e),
       emissive: new THREE.Color(0x0a1a2a),
-      transmission: 0.85,
+      transmission: 0.95,  // Higher transparency
       thickness: 0.4,
       roughness: 0.95,
       metalness: 0.0,
       transparent: true,
-      opacity: 0.25,
-      side: THREE.DoubleSide
+      opacity: 0.08,  // Much more transparent, almost invisible
+      side: THREE.FrontSide  // Only render front to reduce visual density
     });
     
     const mesh = new THREE.Mesh(hpGeometry, m);
@@ -282,13 +282,16 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
     mesh.name = 'heliosphere';
     scene.add(mesh);
     
-    // Add subtle helioglow effect
+    // Add visible UV glow effect with proper shading
     const glowGeometry = hpGeometry.clone();
-    glowGeometry.scale(1.1, 1.1, 1.1);
-    const glowMaterial = new THREE.MeshBasicMaterial({
-      color: new THREE.Color(0x1a2a4a),
+    glowGeometry.scale(1.15, 1.15, 1.15);  // Slightly larger glow
+    const glowMaterial = new THREE.MeshPhongMaterial({
+      color: new THREE.Color(0x3a5a8e),  // Brighter cyan-blue UV glow
+      emissive: new THREE.Color(0x2a4a7e),  // Emissive glow
+      emissiveIntensity: 0.8,
       transparent: true,
-      opacity: 0.03,
+      opacity: 0.25,  // Much more visible
+      shininess: 50,  // Glossy UV appearance
       side: THREE.DoubleSide
     });
     const glow = new THREE.Mesh(glowGeometry, glowMaterial);
@@ -351,9 +354,9 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
   ismWindGeo.setAttribute('color', new THREE.BufferAttribute(ismWindColors, 3));
   
   const ismWindMat = new THREE.PointsMaterial({
-    size: 0.020,  // Larger particles
+    size: 0.015,  // Smaller, more numerous feel
     transparent: true,
-    opacity: 0.8,  // Much brighter
+    opacity: 0.4,  // More subtle
     vertexColors: true,
     sizeAttenuation: true,
     blending: THREE.AdditiveBlending
@@ -367,8 +370,8 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
   const sol = new THREE.Group(); // this group will translate along +X
   scene.add(sol);
 
-  // Sun
-  const sunGeometry = new THREE.SphereGeometry(0.45, 32, 32);
+  // Sun - smaller for better proportion to heliosphere
+  const sunGeometry = new THREE.SphereGeometry(0.25, 32, 32);
   const sunMaterial = new THREE.MeshStandardMaterial({ 
     color: 0xffffaa,  // Brighter yellow-white
     emissive: 0xffaa44,  // Add emissive glow
@@ -377,8 +380,8 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
   const sun = new THREE.Mesh(sunGeometry, sunMaterial);
   sol.add(sun);
   
-  // Sun glow/halo
-  const sunGlowGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+  // Sun glow/halo - also smaller
+  const sunGlowGeometry = new THREE.SphereGeometry(0.3, 32, 32);
   const sunGlowMaterial = new THREE.MeshBasicMaterial({
     color: 0xffaa44,
     transparent: true,
@@ -491,13 +494,14 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
     const density = solarWindDensity(streamPoints[streamPoints.length - 1].length() / 0.03);
     const opacity = Math.min(0.7, Math.max(0.2, density / 10));
     
-    // Create line geometry for fine threads
+    // Create line geometry for fine threads (barely visible guide lines)
     const geometry = new THREE.BufferGeometry().setFromPoints(streamPoints);
     const material = new THREE.LineBasicMaterial({
       color: 0xffffaa,
       transparent: true,
-      opacity: opacity,
-      linewidth: 0.5
+      opacity: opacity * 0.15,  // Much more subtle, almost invisible
+      linewidth: 0.5,
+      blending: THREE.AdditiveBlending  // Soft glow effect
     });
     
     const line = new THREE.Line(geometry, material);
@@ -512,6 +516,70 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
       terminationShockDist: terminationShockDist
     });
   }
+  
+  // ===== Realistic Particle-Based Solar Wind =====
+  // Add thousands of small particles for realistic plasma flow appearance
+  const SOLAR_WIND_PARTICLES = 4000;
+  const solarWindParticleGeo = new THREE.BufferGeometry();
+  const solarWindParticlePositions = new Float32Array(SOLAR_WIND_PARTICLES * 3);
+  const solarWindParticleColors = new Float32Array(SOLAR_WIND_PARTICLES * 3);
+  const solarWindParticleVelocities: THREE.Vector3[] = [];
+  
+  // Initialize solar wind particles
+  for (let i = 0; i < SOLAR_WIND_PARTICLES; i++) {
+    // Random direction from sun
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.acos(2 * Math.random() - 1);
+    const direction = new THREE.Vector3(
+      Math.sin(phi) * Math.cos(theta),
+      Math.sin(phi) * Math.sin(theta),
+      Math.cos(phi)
+    ).normalize();
+    
+    // Start from sun surface with some randomness
+    const startDist = 0.5 + Math.random() * 0.3;
+    const pos = direction.clone().multiplyScalar(startDist);
+    
+    solarWindParticlePositions[i * 3 + 0] = pos.x;
+    solarWindParticlePositions[i * 3 + 1] = pos.y;
+    solarWindParticlePositions[i * 3 + 2] = pos.z;
+    
+    // Velocity: radial outward with slight turbulence
+    const baseSpeed = 0.008 + Math.random() * 0.004;
+    const velocity = direction.clone().multiplyScalar(baseSpeed);
+    // Add subtle turbulence (Perlin-like noise approximation)
+    velocity.x += (Math.random() - 0.5) * 0.001;
+    velocity.y += (Math.random() - 0.5) * 0.001;
+    velocity.z += (Math.random() - 0.5) * 0.001;
+    solarWindParticleVelocities.push(velocity);
+    
+    // Color gradient: yellow-white near sun to pale blue farther out
+    const distFromSun = startDist;
+    const maxDist = 4.0; // Heliosphere extent in scene units
+    const t = Math.min(distFromSun / maxDist, 1.0);
+    
+    // Interpolate from yellow-white (1.0, 1.0, 0.8) to pale blue (0.8, 0.9, 1.0)
+    solarWindParticleColors[i * 3 + 0] = 1.0 - t * 0.2;  // R
+    solarWindParticleColors[i * 3 + 1] = 1.0 - t * 0.1;  // G
+    solarWindParticleColors[i * 3 + 2] = 0.8 + t * 0.2;  // B
+  }
+  
+  solarWindParticleGeo.setAttribute('position', new THREE.BufferAttribute(solarWindParticlePositions, 3));
+  solarWindParticleGeo.setAttribute('color', new THREE.BufferAttribute(solarWindParticleColors, 3));
+  
+  const solarWindParticleMat = new THREE.PointsMaterial({
+    size: 0.010,  // Small particles
+    transparent: true,
+    opacity: 0.25,  // Subtle, not bright
+    vertexColors: true,
+    sizeAttenuation: true,
+    blending: THREE.AdditiveBlending,  // Soft glow
+    depthWrite: false
+  });
+  
+  const solarWindParticles = new THREE.Points(solarWindParticleGeo, solarWindParticleMat);
+  solarWindParticles.name = 'solarWindParticles';
+  sol.add(solarWindParticles);
   
   // ===== Termination Shock Visualization =====
   // Show the boundary where solar wind slows from supersonic to subsonic
@@ -539,14 +607,14 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
     const solarCyclePhase = (year % 11) / 11;
     const solarActivity = 0.7 + Math.sin(solarCyclePhase * Math.PI * 2) * 0.3; // 0.4 to 1.0
     
-    // MUCH LOWER opacity for faint aurora-like glow - can see through it
-    // Base opacity is extremely low (0.002 to 0.006) - like a faint aurora
-    const baseOpacity = 0.002 + solarActivity * 0.004; // 0.002 to 0.006 (0.2% to 0.6%)
+    // Subtle opacity for aurora-like glow - visible but doesn't overpower UV glow
+    // Base opacity range 0.15 to 0.25 with additive blending
+    const baseOpacity = 0.15 + solarActivity * 0.10; // 0.15 to 0.25 (15% to 25%)
     
-    // Create MANY thin layers with VERY SMALL spacing for smooth, blurry aurora-like effect
-    // Aurora effect: many overlapping layers with very low opacity and tight spacing
-    const layerCount = 8; // Reduced from 12 to save memory
-    // Much tighter spacing between layers for smoother transitions
+    // Create thin layers with small spacing for smooth aurora-like effect
+    // Aurora effect: overlapping layers with moderate opacity and additive blending
+    const layerCount = 8;
+    // Tight spacing between layers for smoother transitions
     const layerScales = [1.0, 1.01, 1.02, 1.03, 1.04, 1.05, 1.06, 1.07];
     // Smooth opacity falloff - no sharp transitions
     const layerOpacities = [
@@ -731,17 +799,75 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
   voyagerGroup.name = 'voyagers';
   scene.add(voyagerGroup);
   
-  // Voyager 1
-  const v1Geometry = new THREE.ConeGeometry(0.1, 0.3, 8);
-  const v1Material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-  const voyager1 = new THREE.Mesh(v1Geometry, v1Material);
-  voyager1.name = 'Voyager 1';
+  // Voyager 1 - Billboard sprite marker with ring
+  const v1Group = new THREE.Group();
+  v1Group.name = 'Voyager 1';
   
-  // Voyager 2
-  const v2Geometry = new THREE.ConeGeometry(0.1, 0.3, 8);
-  const v2Material = new THREE.MeshBasicMaterial({ color: 0x00ffff });
-  const voyager2 = new THREE.Mesh(v2Geometry, v2Material);
-  voyager2.name = 'Voyager 2';
+  // Core sprite (small dot)
+  const v1SpriteMap = new THREE.Texture();
+  const v1SpriteCanvas = document.createElement('canvas');
+  v1SpriteCanvas.width = 64;
+  v1SpriteCanvas.height = 64;
+  const v1Ctx = v1SpriteCanvas.getContext('2d')!;
+  v1Ctx.fillStyle = '#00ff00';
+  v1Ctx.beginPath();
+  v1Ctx.arc(32, 32, 16, 0, Math.PI * 2);
+  v1Ctx.fill();
+  v1SpriteMap.image = v1SpriteCanvas;
+  v1SpriteMap.needsUpdate = true;
+  
+  const v1SpriteMat = new THREE.SpriteMaterial({ map: v1SpriteMap, color: 0x00ff00 });
+  const v1Sprite = new THREE.Sprite(v1SpriteMat);
+  v1Sprite.scale.set(0.15, 0.15, 1);
+  v1Group.add(v1Sprite);
+  
+  // Ring around sprite
+  const v1RingGeo = new THREE.RingGeometry(0.08, 0.10, 32);
+  const v1RingMat = new THREE.MeshBasicMaterial({
+    color: 0x00ff00,
+    transparent: true,
+    opacity: 0.4,
+    side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending
+  });
+  const v1Ring = new THREE.Mesh(v1RingGeo, v1RingMat);
+  v1Group.add(v1Ring);
+  const voyager1 = v1Group;
+  
+  // Voyager 2 - Billboard sprite marker with ring
+  const v2Group = new THREE.Group();
+  v2Group.name = 'Voyager 2';
+  
+  // Core sprite (small dot)
+  const v2SpriteMap = new THREE.Texture();
+  const v2SpriteCanvas = document.createElement('canvas');
+  v2SpriteCanvas.width = 64;
+  v2SpriteCanvas.height = 64;
+  const v2Ctx = v2SpriteCanvas.getContext('2d')!;
+  v2Ctx.fillStyle = '#00ffff';
+  v2Ctx.beginPath();
+  v2Ctx.arc(32, 32, 16, 0, Math.PI * 2);
+  v2Ctx.fill();
+  v2SpriteMap.image = v2SpriteCanvas;
+  v2SpriteMap.needsUpdate = true;
+  
+  const v2SpriteMat = new THREE.SpriteMaterial({ map: v2SpriteMap, color: 0x00ffff });
+  const v2Sprite = new THREE.Sprite(v2SpriteMat);
+  v2Sprite.scale.set(0.15, 0.15, 1);
+  v2Group.add(v2Sprite);
+  
+  // Ring around sprite
+  const v2RingGeo = new THREE.RingGeometry(0.08, 0.10, 32);
+  const v2RingMat = new THREE.MeshBasicMaterial({
+    color: 0x00ffff,
+    transparent: true,
+    opacity: 0.4,
+    side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending
+  });
+  const v2Ring = new THREE.Mesh(v2RingGeo, v2RingMat);
+  v2Group.add(v2Ring);
+  const voyager2 = v2Group;
   
   voyagerGroup.add(voyager1);
   voyagerGroup.add(voyager2);
@@ -852,13 +978,13 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
   });
 
   // Brighter lighting for better visibility
-  scene.add(new THREE.AmbientLight(0xffffff, 0.3));  // Increased ambient
-  const sunLight = new THREE.DirectionalLight(0xffffaa, 0.8);  // Brighter sunlight
+  scene.add(new THREE.AmbientLight(0xffffff, 0.6));  // Double ambient for overall brightness
+  const sunLight = new THREE.DirectionalLight(0xffffaa, 1.2);  // Increased sunlight intensity
   sunLight.position.set(2, 1, 2);
   scene.add(sunLight);
   
   // Add brighter fill light for heliosphere visibility
-  const fillLight = new THREE.DirectionalLight(0x6a7a9a, 0.3);
+  const fillLight = new THREE.DirectionalLight(0x6a7a9a, 0.5);  // Increased fill light
   fillLight.position.set(-2, -1, -2);
   scene.add(fillLight);
   
@@ -963,12 +1089,12 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
     const earthRadius = PLANET_PROPERTIES.Earth.radius;
     const planetRadius = PLANET_PROPERTIES[name as keyof typeof PLANET_PROPERTIES]?.radius || earthRadius;
     const relativeSize = planetRadius / earthRadius;
-    // Scale for visibility but maintain proportions (logarithmic scaling for gas giants)
-    const size = name === "Jupiter" ? 0.15 : 
-                 name === "Saturn" ? 0.13 : 
-                 name === "Uranus" || name === "Neptune" ? 0.10 :
-                 name === "Pluto" ? 0.05 :
-                 0.08 * Math.pow(relativeSize, 0.7);
+    // Tiny dots for planets - symbolic representation, not to scale
+    const size = name === "Jupiter" ? 0.04 : 
+                 name === "Saturn" ? 0.04 : 
+                 name === "Uranus" || name === "Neptune" ? 0.03 :
+                 name === "Pluto" ? 0.02 :
+                 0.02; // Terrestrial planets as small dots
     
     switch(name) {
       case "Mercury":
@@ -1077,7 +1203,7 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
   // ==== Component visibility state (astronomer controls) ====
   const visibility: ComponentVisibility = {
     heliosphere: true,
-    helioglow: false,
+    helioglow: true,  // Visible by default - shows UV glow boundary
     terminationShock: true,
     bowShock: false,
     solarWind: true,

@@ -47,20 +47,22 @@ export class LabelManager {
     
     const element = document.createElement('div');
     element.className = 'celestial-label';
+    // Balloon-style label with gradient background and enhanced shadow
     element.style.cssText = `
       color: ${info.color || '#ffffff'};
       font-family: 'Inter', -apple-system, sans-serif;
       font-size: ${info.fontSize || 12}px;
       font-weight: 500;
       text-align: center;
-      background: rgba(0, 0, 0, 0.7);
-      padding: 4px 8px;
-      border-radius: 4px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: linear-gradient(135deg, rgba(0, 0, 0, 0.85), rgba(20, 20, 40, 0.85));
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1.5px solid rgba(255, 255, 255, 0.3);
       white-space: nowrap;
       pointer-events: none;
       user-select: none;
       backdrop-filter: blur(4px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
     `;
     
     let labelText = info.text;
@@ -73,6 +75,24 @@ export class LabelManager {
     }
     
     element.textContent = labelText;
+    
+    // Add scale disclaimer as a subtle footer (only for first label created)
+    if (this.labels.size === 0) {
+      const disclaimer = document.createElement('div');
+      disclaimer.style.cssText = `
+        position: fixed;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-family: 'Inter', -apple-system, sans-serif;
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.4);
+        pointer-events: none;
+        user-select: none;
+      `;
+      disclaimer.textContent = '⚠ Objects shown at enhanced scale for visibility';
+      this.container.appendChild(disclaimer);
+    }
     
     const label = new CSS3DObject(element);
     const offset = info.offset || new THREE.Vector3(0, 0.5, 0);
