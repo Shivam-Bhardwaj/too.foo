@@ -95,10 +95,38 @@ input[type="range"]:focus::-moz-range-thumb {
   box-shadow: 0 0 8px rgba(153, 230, 255, 0.8);
 }
 
-/* Focus rings */
+/* Focus rings - Enhanced for WCAG compliance */
 *:focus-visible {
-  outline: 2px solid rgba(153, 230, 255, 0.5);
+  outline: 2px solid rgba(153, 230, 255, 0.8);
   outline-offset: 2px;
+  outline-width: 3px;
+}
+
+/* Ensure focus is visible on all interactive elements */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgba(153, 230, 255, 0.9);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 1px rgba(153, 230, 255, 0.3);
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  *:focus-visible {
+    outline: 3px solid #ffffff;
+    outline-offset: 3px;
+  }
+  
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible {
+    outline: 3px solid #ffffff;
+    outline-offset: 3px;
+    box-shadow: 0 0 0 2px #000000;
+  }
 }
 
 [data-speed-scroll] {

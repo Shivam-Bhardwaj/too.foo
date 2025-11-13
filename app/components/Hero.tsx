@@ -123,12 +123,15 @@ const Hero = forwardRef<HeroRef>((props, ref) => {
 
   if (initFailed || !webglSupported) {
     return (
-      <div className="absolute inset-0 flex items-center justify-center">
+      <div className="absolute inset-0 flex items-center justify-center" role="img" aria-label="Heliosphere visualization fallback">
         <img
           src="/img/heliosphere-still.png"
-          alt="Stylized, scientifically-informed heliosphere; apex direction implied."
+          alt="Stylized, scientifically-informed heliosphere; apex direction implied. WebGL is not supported or failed to initialize."
           className="w-full h-full object-cover opacity-50"
         />
+        <div className="sr-only" role="alert">
+          WebGL visualization is not available. Displaying static image fallback.
+        </div>
       </div>
     );
   }
