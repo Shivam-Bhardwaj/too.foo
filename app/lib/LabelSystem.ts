@@ -47,8 +47,8 @@ export class LabelManager {
     
     const element = document.createElement('div');
     element.className = 'celestial-label';
-    // Tiny balloon-style label - mobile-friendly size
-    const fontSize = info.fontSize || 8; // Much smaller default (was 12)
+    // Extremely tiny balloon-style label - CSS3D scales things up, so use very small font
+    const fontSize = info.fontSize || 4; // Very small default (CSS3D makes things appear larger)
     element.style.cssText = `
       color: ${info.color || '#ffffff'};
       font-family: 'Inter', -apple-system, sans-serif;
@@ -56,14 +56,14 @@ export class LabelManager {
       font-weight: 400;
       text-align: center;
       background: linear-gradient(135deg, rgba(0, 0, 0, 0.85), rgba(20, 20, 40, 0.85));
-      padding: 2px 4px;
-      border-radius: 3px;
-      border: 1px solid rgba(255, 255, 255, 0.3);
+      padding: 1px 3px;
+      border-radius: 2px;
+      border: 0.5px solid rgba(255, 255, 255, 0.3);
       white-space: nowrap;
       pointer-events: none;
       user-select: none;
       backdrop-filter: blur(2px);
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
       transform-style: preserve-3d;
     `;
     
@@ -103,6 +103,10 @@ export class LabelManager {
     // Fix orientation - ensure label faces camera correctly (not upside down)
     // CSS3D objects need to be rotated to face camera properly
     label.rotation.set(0, 0, 0);
+    
+    // CSS3D objects appear much larger than expected - scale them down significantly
+    // Use a very small scale to make labels tiny
+    label.scale.set(0.01, 0.01, 0.01); // Scale down by 100x to make labels tiny
     
     this.css3DScene!.add(label);
     this.labels.set(id, label);
@@ -158,11 +162,11 @@ export class LabelManager {
       const visible = distance >= minDistance && distance <= maxDistance;
       label.element.style.display = visible ? 'block' : 'none';
       
-      // Minimal scaling - keep labels small and readable
-      // Scale very slightly based on distance, but keep it subtle
-      const scale = Math.max(0.8, Math.min(1.2, 15 / distance));
-      // Apply scale without breaking orientation
-      label.scale.set(scale, scale, scale);
+      // Keep labels tiny - minimal distance-based scaling
+      // Base scale is 0.01 (100x smaller), add tiny distance adjustment
+      const baseScale = 0.01;
+      const distanceScale = Math.max(0.8, Math.min(1.5, 20 / distance));
+      label.scale.set(baseScale * distanceScale, baseScale * distanceScale, baseScale * distanceScale);
     });
   }
   
