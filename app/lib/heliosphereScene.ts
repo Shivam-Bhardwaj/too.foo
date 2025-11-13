@@ -1091,12 +1091,12 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
     const earthRadius = PLANET_PROPERTIES.Earth.radius;
     const planetRadius = PLANET_PROPERTIES[name as keyof typeof PLANET_PROPERTIES]?.radius || earthRadius;
     const relativeSize = planetRadius / earthRadius;
-    // Tiny dots for planets - symbolic representation, not to scale
-    const size = name === "Jupiter" ? 0.04 : 
-                 name === "Saturn" ? 0.04 : 
-                 name === "Uranus" || name === "Neptune" ? 0.03 :
-                 name === "Pluto" ? 0.02 :
-                 0.02; // Terrestrial planets as small dots
+    // Visible but symbolic planet sizes - large enough to see clearly
+    const size = name === "Jupiter" ? 0.12 : 
+                 name === "Saturn" ? 0.11 : 
+                 name === "Uranus" || name === "Neptune" ? 0.09 :
+                 name === "Pluto" ? 0.06 :
+                 0.08; // Terrestrial planets (Earth, Mars, Venus, Mercury) - visible size
     
     switch(name) {
       case "Mercury":
@@ -1177,11 +1177,14 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
     planetMeshes[name] = mesh;
     
     // Add marker ring around each planet for visibility at distance
-    const markerRingGeo = new THREE.RingGeometry(0.12, 0.14, 32);
+    // Ring size proportional to planet size
+    const ringOuter = size * 1.8; // Ring extends 1.8x planet radius
+    const ringInner = size * 1.5; // Inner edge at 1.5x planet radius
+    const markerRingGeo = new THREE.RingGeometry(ringInner, ringOuter, 32);
     const markerRingMat = new THREE.MeshBasicMaterial({
       color: color,
       transparent: true,
-      opacity: 0.5,
+      opacity: 0.6, // More visible
       side: THREE.DoubleSide,
       blending: THREE.AdditiveBlending,
       depthWrite: false
