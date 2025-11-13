@@ -370,8 +370,15 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
   const sol = new THREE.Group(); // this group will translate along +X
   scene.add(sol);
 
-  // Sun - realistic small size (scale factor: 1 solar radius ≈ 0.00465 AU, scaled to scene)
-  const sunGeometry = new THREE.SphereGeometry(0.00465 * 0.03 * 30, 32, 32); // Scaled but still small
+  // Sun - realistic size using same scaling as planets
+  const SUN_RADIUS_KM = 696000; // Solar radius in km
+  const AU_IN_KM = 149597871;
+  const sunRadiusAU = SUN_RADIUS_KM / AU_IN_KM; // ~0.00465 AU
+  const sunRadiusScene = sunRadiusAU * 0.03; // Convert to scene units
+  const sunVisibilityScale = 20000; // Same scale as planets for consistency
+  const sunSize = sunRadiusScene * sunVisibilityScale;
+  
+  const sunGeometry = new THREE.SphereGeometry(sunSize, 32, 32);
   const sunMaterial = new THREE.MeshStandardMaterial({ 
     color: 0xffffaa,  // Brighter yellow-white
     emissive: 0xffaa44,  // Add emissive glow
@@ -380,8 +387,8 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
   const sun = new THREE.Mesh(sunGeometry, sunMaterial);
   sol.add(sun);
   
-  // Sun glow/halo - subtle glow around tiny sun
-  const sunGlowGeometry = new THREE.SphereGeometry(0.00465 * 0.03 * 40, 32, 32);
+  // Sun glow/halo - subtle glow around sun
+  const sunGlowGeometry = new THREE.SphereGeometry(sunSize * 1.3, 32, 32);
   const sunGlowMaterial = new THREE.MeshBasicMaterial({
     color: 0xffaa44,
     transparent: true,
@@ -1087,14 +1094,17 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
     
     // More realistic planet colors and materials
     let color, emissive, metalness, roughness;
-    // Proportional sizes based on real planet radii (Earth = baseline)
-    const earthRadius = PLANET_PROPERTIES.Earth.radius;
-    const planetRadius = PLANET_PROPERTIES[name as keyof typeof PLANET_PROPERTIES]?.radius || earthRadius;
-    const relativeSize = planetRadius / earthRadius;
-    // Realistic planet sizes scaled proportionally from actual radii
-    // Scale factor: planet radius in km * scale for scene visibility
-    const scaleForVisibility = 0.00001; // Make planets visible but proportional
-    const size = (planetRadius * scaleForVisibility);
+    // Convert planet radius from km to AU, then to scene units
+    const planetRadiusKm = PLANET_PROPERTIES[name as keyof typeof PLANET_PROPERTIES]?.radius || PLANET_PROPERTIES.Earth.radius;
+    const AU_IN_KM = 149597871; // 1 AU in kilometers
+    const planetRadiusAU = planetRadiusKm / AU_IN_KM; // Planet radius in AU
+    const planetRadiusScene = planetRadiusAU * 0.03; // Convert AU to scene units (same scale as orbits)
+    
+    // Planets are extremely tiny compared to AU - need large visibility scale
+    // At realistic scale, Earth would be 0.00000128 scene units (invisible)
+    // Use 20000x scale to make planets visible but still proportional to each other
+    const visibilityScale = 20000;
+    const size = planetRadiusScene * visibilityScale;
     
     switch(name) {
       case "Mercury":
@@ -1203,7 +1213,13 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
   moonGroup.name = 'moon';
   sol.add(moonGroup);
   
-  const moonGeometry = new THREE.SphereGeometry(0.02, 16, 16);
+  // Moon - realistic size using same scaling
+  const MOON_RADIUS_KM = 1737.4;
+  const moonRadiusAU = MOON_RADIUS_KM / AU_IN_KM;
+  const moonRadiusScene = moonRadiusAU * 0.03;
+  const moonSize = moonRadiusScene * 20000; // Same visibility scale as planets
+  
+  const moonGeometry = new THREE.SphereGeometry(moonSize, 16, 16);
   const moonMaterial = new THREE.MeshStandardMaterial({
     color: 0xaaaaaa,
     emissive: 0x000000,
@@ -1213,8 +1229,10 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
   const moon = new THREE.Mesh(moonGeometry, moonMaterial);
   moonGroup.add(moon);
   
-  // Moon orbit radius (relative to Earth)
-  const MOON_ORBIT_RADIUS = 0.15;
+  // Moon orbit radius (realistic: 384,400 km = 0.00257 AU)
+  const MOON_ORBIT_KM = 384400;
+  const MOON_ORBIT_AU = MOON_ORBIT_KM / AU_IN_KM;
+  const MOON_ORBIT_RADIUS = MOON_ORBIT_AU * 0.03; // Scene units
   const MOON_PERIOD_DAYS = 27.32; // Sidereal month in days
   const MOON_PERIOD_YEARS = MOON_PERIOD_DAYS / 365.25;
 
