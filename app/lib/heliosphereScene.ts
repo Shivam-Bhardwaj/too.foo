@@ -1399,7 +1399,7 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
           position: worldPos,
           offset: new THREE.Vector3(0, 0.3, 0),
           showDistance: true,
-          fontSize: 11
+          fontSize: 8  // Tiny font for mobile readability
         });
       });
       
@@ -1411,7 +1411,7 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
         position: v1WorldPos,
         offset: new THREE.Vector3(0, 0.3, 0),
         color: '#00ff00',
-        fontSize: 10
+        fontSize: 7  // Tiny font
       });
       
       const v2WorldPos = new THREE.Vector3();
@@ -1421,7 +1421,7 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
         position: v2WorldPos,
         offset: new THREE.Vector3(0, 0.3, 0),
         color: '#00ffff',
-        fontSize: 10
+        fontSize: 7  // Tiny font
       });
       
       // Boundary labels
@@ -1429,14 +1429,14 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
         text: 'Termination Shock',
         position: new THREE.Vector3(90 * 0.03, 0, 0),
         color: '#ffaa44',
-        fontSize: 10
+        fontSize: 7  // Tiny font
       });
       
       labelManager.createLabel('heliopause', {
         text: 'Heliopause',
         position: new THREE.Vector3(120 * 0.03, 0, 0),
         color: '#1a2a4e',
-        fontSize: 10
+        fontSize: 7  // Tiny font
       });
     } else {
       // Remove all labels

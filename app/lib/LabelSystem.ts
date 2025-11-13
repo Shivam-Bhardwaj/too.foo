@@ -47,22 +47,24 @@ export class LabelManager {
     
     const element = document.createElement('div');
     element.className = 'celestial-label';
-    // Balloon-style label with gradient background and enhanced shadow
+    // Tiny balloon-style label - mobile-friendly size
+    const fontSize = info.fontSize || 8; // Much smaller default (was 12)
     element.style.cssText = `
       color: ${info.color || '#ffffff'};
       font-family: 'Inter', -apple-system, sans-serif;
-      font-size: ${info.fontSize || 12}px;
-      font-weight: 500;
+      font-size: ${fontSize}px;
+      font-weight: 400;
       text-align: center;
       background: linear-gradient(135deg, rgba(0, 0, 0, 0.85), rgba(20, 20, 40, 0.85));
-      padding: 6px 10px;
-      border-radius: 6px;
-      border: 1.5px solid rgba(255, 255, 255, 0.3);
+      padding: 2px 4px;
+      border-radius: 3px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
       white-space: nowrap;
       pointer-events: none;
       user-select: none;
-      backdrop-filter: blur(4px);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(2px);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+      transform-style: preserve-3d;
     `;
     
     let labelText = info.text;
@@ -98,6 +100,10 @@ export class LabelManager {
     const offset = info.offset || new THREE.Vector3(0, 0.5, 0);
     label.position.copy(info.position).add(offset);
     
+    // Fix orientation - ensure label faces camera correctly (not upside down)
+    // CSS3D objects need to be rotated to face camera properly
+    label.rotation.set(0, 0, 0);
+    
     this.css3DScene!.add(label);
     this.labels.set(id, label);
   }
@@ -124,6 +130,19 @@ export class LabelManager {
       this.css3DRenderer.setSize(window.innerWidth, window.innerHeight);
     }
     
+    // Fix label orientation - CSS3DObject handles lookAt automatically
+    // But we need to ensure they're not flipped upside down
+    this.labels.forEach((label) => {
+      // Make label face camera
+      label.lookAt(camera.position);
+      
+      // CSS3D can flip labels - add a small offset to prevent flipping
+      // Use a slight upward bias to keep labels readable
+      const lookAtTarget = camera.position.clone();
+      lookAtTarget.y += 0.1; // Small upward bias
+      label.lookAt(lookAtTarget);
+    });
+    
     // Render CSS3D labels
     if (this.css3DRenderer && this.css3DScene) {
       this.css3DRenderer.render(this.css3DScene, camera);
@@ -139,9 +158,11 @@ export class LabelManager {
       const visible = distance >= minDistance && distance <= maxDistance;
       label.element.style.display = visible ? 'block' : 'none';
       
-      // Scale label based on distance
-      const scale = Math.max(0.5, Math.min(1.5, 10 / distance));
-      label.element.style.transform = `scale(${scale})`;
+      // Minimal scaling - keep labels small and readable
+      // Scale very slightly based on distance, but keep it subtle
+      const scale = Math.max(0.8, Math.min(1.2, 15 / distance));
+      // Apply scale without breaking orientation
+      label.scale.set(scale, scale, scale);
     });
   }
   
