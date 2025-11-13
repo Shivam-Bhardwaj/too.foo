@@ -370,30 +370,31 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
   const sol = new THREE.Group(); // this group will translate along +X
   scene.add(sol);
 
-  // Sun - realistic size using same scaling as planets
+  // Sun - realistic size but use much smaller visibility scale than planets
   const SUN_RADIUS_KM = 696000; // Solar radius in km
   const AU_IN_KM = 149597871;
   const sunRadiusAU = SUN_RADIUS_KM / AU_IN_KM; // ~0.00465 AU
   const sunRadiusScene = sunRadiusAU * 0.03; // Convert to scene units
-  const sunVisibilityScale = 20000; // Same scale as planets for consistency
+  const sunVisibilityScale = 200; // Much smaller scale - sun should be bright but small
   const sunSize = sunRadiusScene * sunVisibilityScale;
   
   const sunGeometry = new THREE.SphereGeometry(sunSize, 32, 32);
   const sunMaterial = new THREE.MeshStandardMaterial({ 
     color: 0xffffaa,  // Brighter yellow-white
     emissive: 0xffaa44,  // Add emissive glow
-    emissiveIntensity: 2.0  // Brighter to be visible at small size
+    emissiveIntensity: 3.0  // Very bright to compensate for small size
   });
   const sun = new THREE.Mesh(sunGeometry, sunMaterial);
   sol.add(sun);
   
-  // Sun glow/halo - subtle glow around sun
-  const sunGlowGeometry = new THREE.SphereGeometry(sunSize * 1.3, 32, 32);
+  // Sun glow/halo - bright glow around small sun
+  const sunGlowGeometry = new THREE.SphereGeometry(sunSize * 2.0, 32, 32);
   const sunGlowMaterial = new THREE.MeshBasicMaterial({
     color: 0xffaa44,
     transparent: true,
-    opacity: 0.3,
-    side: THREE.DoubleSide
+    opacity: 0.5, // Brighter glow to make small sun findable
+    side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending
   });
   const sunGlow = new THREE.Mesh(sunGlowGeometry, sunGlowMaterial);
   sol.add(sunGlow);
