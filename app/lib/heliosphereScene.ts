@@ -370,18 +370,18 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
   const sol = new THREE.Group(); // this group will translate along +X
   scene.add(sol);
 
-  // Sun - smaller for better proportion to heliosphere
-  const sunGeometry = new THREE.SphereGeometry(0.25, 32, 32);
+  // Sun - realistic small size (scale factor: 1 solar radius ≈ 0.00465 AU, scaled to scene)
+  const sunGeometry = new THREE.SphereGeometry(0.00465 * 0.03 * 30, 32, 32); // Scaled but still small
   const sunMaterial = new THREE.MeshStandardMaterial({ 
     color: 0xffffaa,  // Brighter yellow-white
     emissive: 0xffaa44,  // Add emissive glow
-    emissiveIntensity: 1.5
+    emissiveIntensity: 2.0  // Brighter to be visible at small size
   });
   const sun = new THREE.Mesh(sunGeometry, sunMaterial);
   sol.add(sun);
   
-  // Sun glow/halo - also smaller
-  const sunGlowGeometry = new THREE.SphereGeometry(0.3, 32, 32);
+  // Sun glow/halo - subtle glow around tiny sun
+  const sunGlowGeometry = new THREE.SphereGeometry(0.00465 * 0.03 * 40, 32, 32);
   const sunGlowMaterial = new THREE.MeshBasicMaterial({
     color: 0xffaa44,
     transparent: true,
@@ -1091,12 +1091,10 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
     const earthRadius = PLANET_PROPERTIES.Earth.radius;
     const planetRadius = PLANET_PROPERTIES[name as keyof typeof PLANET_PROPERTIES]?.radius || earthRadius;
     const relativeSize = planetRadius / earthRadius;
-    // Visible but symbolic planet sizes - large enough to see clearly
-    const size = name === "Jupiter" ? 0.12 : 
-                 name === "Saturn" ? 0.11 : 
-                 name === "Uranus" || name === "Neptune" ? 0.09 :
-                 name === "Pluto" ? 0.06 :
-                 0.08; // Terrestrial planets (Earth, Mars, Venus, Mercury) - visible size
+    // Realistic planet sizes scaled proportionally from actual radii
+    // Scale factor: planet radius in km * scale for scene visibility
+    const scaleForVisibility = 0.00001; // Make planets visible but proportional
+    const size = (planetRadius * scaleForVisibility);
     
     switch(name) {
       case "Mercury":
@@ -1176,15 +1174,15 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
     planetsGroup.add(mesh);
     planetMeshes[name] = mesh;
     
-    // Add marker ring around each planet for visibility at distance
-    // Ring size proportional to planet size
-    const ringOuter = size * 1.8; // Ring extends 1.8x planet radius
-    const ringInner = size * 1.5; // Inner edge at 1.5x planet radius
+    // Add subtle marker ring around each planet for findability
+    // Ring size proportional to planet size, subtle for realism
+    const ringOuter = size * 2.5; // Subtle ring
+    const ringInner = size * 2.0;
     const markerRingGeo = new THREE.RingGeometry(ringInner, ringOuter, 32);
     const markerRingMat = new THREE.MeshBasicMaterial({
       color: color,
       transparent: true,
-      opacity: 0.6, // More visible
+      opacity: 0.3, // Very subtle, labels do the work
       side: THREE.DoubleSide,
       blending: THREE.AdditiveBlending,
       depthWrite: false
