@@ -370,31 +370,23 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
   const sol = new THREE.Group(); // this group will translate along +X
   scene.add(sol);
 
-  // Sun - realistic size but use much smaller visibility scale than planets
-  const SUN_RADIUS_KM = 696000; // Solar radius in km
-  const AU_IN_KM = 149597871;
-  const sunRadiusAU = SUN_RADIUS_KM / AU_IN_KM; // ~0.00465 AU
-  const sunRadiusScene = sunRadiusAU * 0.03; // Convert to scene units
-  const sunVisibilityScale = 200; // Much smaller scale - sun should be bright but small
-  const sunSize = sunRadiusScene * sunVisibilityScale;
-  
-  const sunGeometry = new THREE.SphereGeometry(sunSize, 32, 32);
+  // Sun - smaller for better proportion to heliosphere
+  const sunGeometry = new THREE.SphereGeometry(0.25, 32, 32);
   const sunMaterial = new THREE.MeshStandardMaterial({ 
     color: 0xffffaa,  // Brighter yellow-white
     emissive: 0xffaa44,  // Add emissive glow
-    emissiveIntensity: 3.0  // Very bright to compensate for small size
+    emissiveIntensity: 1.5
   });
   const sun = new THREE.Mesh(sunGeometry, sunMaterial);
   sol.add(sun);
   
-  // Sun glow/halo - bright glow around small sun
-  const sunGlowGeometry = new THREE.SphereGeometry(sunSize * 2.0, 32, 32);
+  // Sun glow/halo - also smaller
+  const sunGlowGeometry = new THREE.SphereGeometry(0.3, 32, 32);
   const sunGlowMaterial = new THREE.MeshBasicMaterial({
     color: 0xffaa44,
     transparent: true,
-    opacity: 0.5, // Brighter glow to make small sun findable
-    side: THREE.DoubleSide,
-    blending: THREE.AdditiveBlending
+    opacity: 0.3,
+    side: THREE.DoubleSide
   });
   const sunGlow = new THREE.Mesh(sunGlowGeometry, sunGlowMaterial);
   sol.add(sunGlow);
@@ -902,9 +894,7 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
   voyagerGroup.add(v2Trajectory);
   
   // ===== Label System =====
-  // Get or create container for CSS3D labels
-  const container = canvas.parentElement || document.body;
-  const labelManager = new LabelManager(container, camera);
+  const labelManager = new LabelManager(canvas, camera);
   
   // ===== Interstellar Objects =====
   const interstellarObjectsGroup = new THREE.Group();
@@ -1095,17 +1085,16 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
     
     // More realistic planet colors and materials
     let color, emissive, metalness, roughness;
-    // Convert planet radius from km to AU, then to scene units
-    const planetRadiusKm = PLANET_PROPERTIES[name as keyof typeof PLANET_PROPERTIES]?.radius || PLANET_PROPERTIES.Earth.radius;
-    const AU_IN_KM = 149597871; // 1 AU in kilometers
-    const planetRadiusAU = planetRadiusKm / AU_IN_KM; // Planet radius in AU
-    const planetRadiusScene = planetRadiusAU * 0.03; // Convert AU to scene units (same scale as orbits)
-    
-    // Planets are extremely tiny compared to AU - need large visibility scale
-    // At realistic scale, Earth would be 0.00000128 scene units (invisible)
-    // Use 20000x scale to make planets visible but still proportional to each other
-    const visibilityScale = 20000;
-    const size = planetRadiusScene * visibilityScale;
+    // Proportional sizes based on real planet radii (Earth = baseline)
+    const earthRadius = PLANET_PROPERTIES.Earth.radius;
+    const planetRadius = PLANET_PROPERTIES[name as keyof typeof PLANET_PROPERTIES]?.radius || earthRadius;
+    const relativeSize = planetRadius / earthRadius;
+    // Tiny dots for planets - symbolic representation, not to scale
+    const size = name === "Jupiter" ? 0.04 : 
+                 name === "Saturn" ? 0.04 : 
+                 name === "Uranus" || name === "Neptune" ? 0.03 :
+                 name === "Pluto" ? 0.02 :
+                 0.02; // Terrestrial planets as small dots
     
     switch(name) {
       case "Mercury":
@@ -1185,24 +1174,6 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
     planetsGroup.add(mesh);
     planetMeshes[name] = mesh;
     
-    // Add subtle marker ring around each planet for findability
-    // Ring size proportional to planet size, subtle for realism
-    const ringOuter = size * 2.5; // Subtle ring
-    const ringInner = size * 2.0;
-    const markerRingGeo = new THREE.RingGeometry(ringInner, ringOuter, 32);
-    const markerRingMat = new THREE.MeshBasicMaterial({
-      color: color,
-      transparent: true,
-      opacity: 0.3, // Very subtle, labels do the work
-      side: THREE.DoubleSide,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false
-    });
-    const markerRing = new THREE.Mesh(markerRingGeo, markerRingMat);
-    markerRing.name = name + 'Marker';
-    markerRing.rotation.x = Math.PI / 2; // Face up initially
-    mesh.add(markerRing); // Add to planet so it follows it
-    
     // Store Earth reference for Moon
     if (name === "Earth") {
       earthMeshRef.current = mesh;
@@ -1214,13 +1185,7 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
   moonGroup.name = 'moon';
   sol.add(moonGroup);
   
-  // Moon - realistic size using same scaling
-  const MOON_RADIUS_KM = 1737.4;
-  const moonRadiusAU = MOON_RADIUS_KM / AU_IN_KM;
-  const moonRadiusScene = moonRadiusAU * 0.03;
-  const moonSize = moonRadiusScene * 20000; // Same visibility scale as planets
-  
-  const moonGeometry = new THREE.SphereGeometry(moonSize, 16, 16);
+  const moonGeometry = new THREE.SphereGeometry(0.02, 16, 16);
   const moonMaterial = new THREE.MeshStandardMaterial({
     color: 0xaaaaaa,
     emissive: 0x000000,
@@ -1230,10 +1195,8 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
   const moon = new THREE.Mesh(moonGeometry, moonMaterial);
   moonGroup.add(moon);
   
-  // Moon orbit radius (realistic: 384,400 km = 0.00257 AU)
-  const MOON_ORBIT_KM = 384400;
-  const MOON_ORBIT_AU = MOON_ORBIT_KM / AU_IN_KM;
-  const MOON_ORBIT_RADIUS = MOON_ORBIT_AU * 0.03; // Scene units
+  // Moon orbit radius (relative to Earth)
+  const MOON_ORBIT_RADIUS = 0.15;
   const MOON_PERIOD_DAYS = 27.32; // Sidereal month in days
   const MOON_PERIOD_YEARS = MOON_PERIOD_DAYS / 365.25;
 
@@ -1298,14 +1261,6 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
       // base ecliptic (x,0,z), then tilt
       mesh.position.set(Math.cos(theta) * R, 0, Math.sin(theta) * R);
       mesh.position.applyAxisAngle(Z_AXIS, ECLIPTIC_TILT);
-      
-      // Make marker ring face camera (billboard effect)
-      const markerRing = mesh.getObjectByName(name + 'Marker');
-      if (markerRing) {
-        const worldPos = new THREE.Vector3();
-        mesh.getWorldPosition(worldPos);
-        markerRing.lookAt(camera.position);
-      }
       
       // Store Earth position for Moon
       if (name === "Earth") {
@@ -1419,7 +1374,7 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
           position: worldPos,
           offset: new THREE.Vector3(0, 0.3, 0),
           showDistance: true,
-          fontSize: 5  // Extremely tiny font (CSS3D scales up)
+          fontSize: 11
         });
       });
       
@@ -1431,7 +1386,7 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
         position: v1WorldPos,
         offset: new THREE.Vector3(0, 0.3, 0),
         color: '#00ff00',
-        fontSize: 4  // Extremely tiny font (CSS3D scales up)
+        fontSize: 10
       });
       
       const v2WorldPos = new THREE.Vector3();
@@ -1441,7 +1396,7 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
         position: v2WorldPos,
         offset: new THREE.Vector3(0, 0.3, 0),
         color: '#00ffff',
-        fontSize: 4  // Extremely tiny font (CSS3D scales up)
+        fontSize: 10
       });
       
       // Boundary labels
@@ -1449,14 +1404,14 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
         text: 'Termination Shock',
         position: new THREE.Vector3(90 * 0.03, 0, 0),
         color: '#ffaa44',
-        fontSize: 4  // Extremely tiny font (CSS3D scales up)
+        fontSize: 10
       });
       
       labelManager.createLabel('heliopause', {
         text: 'Heliopause',
         position: new THREE.Vector3(120 * 0.03, 0, 0),
         color: '#1a2a4e',
-        fontSize: 4  // Extremely tiny font (CSS3D scales up)
+        fontSize: 10
       });
     } else {
       // Remove all labels

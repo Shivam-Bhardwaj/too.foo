@@ -81,6 +81,25 @@ export default function LayerControl({ heroRef }: LayerControlProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const menuRef = useRef<HTMLDivElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Auto-expand all groups on mobile when menu opens
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  useEffect(() => {
+    if (isOpen && isMobile) {
+      // Auto-expand all groups on mobile
+      setExpandedGroups(new Set(LAYER_GROUPS.map(g => g.name)));
+    }
+  }, [isOpen, isMobile]);
 
   useEffect(() => {
     if (heroRef.current) {
@@ -97,25 +116,6 @@ export default function LayerControl({ heroRef }: LayerControlProps) {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setIsOpen(false);
-        // Return focus to the toggle button
-        const toggleButton = menuRef.current?.querySelector('button[aria-expanded="true"]') as HTMLElement;
-        toggleButton?.focus();
-      }
-      // Trap focus within the menu
-      if (event.key === 'Tab' && menuRef.current) {
-        const focusableElements = menuRef.current.querySelectorAll(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        );
-        const firstElement = focusableElements[0] as HTMLElement;
-        const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
-
-        if (event.shiftKey && document.activeElement === firstElement) {
-          event.preventDefault();
-          lastElement?.focus();
-        } else if (!event.shiftKey && document.activeElement === lastElement) {
-          event.preventDefault();
-          firstElement?.focus();
-        }
       }
     };
 
@@ -127,14 +127,6 @@ export default function LayerControl({ heroRef }: LayerControlProps) {
 
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('mousedown', handleClickOutside);
-
-    // Focus first focusable element when menu opens
-    const firstFocusable = menuRef.current?.querySelector(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-    ) as HTMLElement;
-    if (firstFocusable && firstFocusable !== document.activeElement) {
-      setTimeout(() => firstFocusable.focus(), 0);
-    }
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
@@ -182,25 +174,18 @@ export default function LayerControl({ heroRef }: LayerControlProps) {
   const totalCount = Object.keys(layers).length;
 
   const renderGroupControls = () => (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       {LAYER_GROUPS.map((group) => (
         <div key={group.name} className="rounded border border-white/10">
           <button
             onClick={() => handleToggleGroup(group.name)}
-            className="flex w-full items-center justify-between px-3 py-2 text-[0.75rem] text-white transition-colors hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/40"
-            aria-expanded={expandedGroups.has(group.name)}
-            aria-controls={`layer-group-${group.name.toLowerCase().replace(/\s+/g, '-')}`}
+            className="flex w-full items-center justify-between px-2 py-1.5 sm:px-3 sm:py-2 text-[0.7rem] sm:text-[0.75rem] text-white transition-colors hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/40"
           >
             <span className="font-medium">{group.name}</span>
-            <span aria-hidden="true">{expandedGroups.has(group.name) ? '−' : '+'}</span>
+            <span className="text-lg">{expandedGroups.has(group.name) ? '−' : '+'}</span>
           </button>
           {expandedGroups.has(group.name) && (
-            <div 
-              id={`layer-group-${group.name.toLowerCase().replace(/\s+/g, '-')}`}
-              className="space-y-1 border-t border-white/10 bg-white/5 p-2"
-              role="group"
-              aria-label={`${group.name} layers`}
-            >
+            <div className="space-y-1 border-t border-white/10 bg-white/5 p-1.5 sm:p-2">
               {group.keys.map((key) => (
                 <button
                   key={key}
@@ -209,12 +194,11 @@ export default function LayerControl({ heroRef }: LayerControlProps) {
                     event.stopPropagation();
                     handleToggle(key);
                   }}
-                  className={`w-full rounded border px-3 py-2 text-left text-[0.7rem] text-white transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
+                  className={`w-full rounded border px-2 py-1.5 sm:px-3 sm:py-2 text-left text-[0.65rem] sm:text-[0.7rem] text-white transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
                     layers[key]
                       ? 'border-white/40 bg-white/25'
                       : 'border-white/20 bg-white/10 hover:bg-white/20'
                   }`}
-                  aria-pressed={layers[key]}
                 >
                   {LAYER_LABELS[key]}
                 </button>
@@ -234,33 +218,31 @@ export default function LayerControl({ heroRef }: LayerControlProps) {
     >
       <button
         onClick={() => setIsOpen((prev) => !prev)}
-        className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[0.65rem] uppercase tracking-[0.25em] text-white transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/40"
+        className="inline-flex items-center gap-1 sm:gap-2 rounded-full border border-white/20 bg-white/10 px-2 py-0.5 sm:px-3 sm:py-1 text-[0.55rem] sm:text-[0.65rem] uppercase tracking-[0.2em] sm:tracking-[0.25em] text-white transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/40"
         aria-expanded={isOpen}
         aria-label="Toggle layer visibility menu"
       >
         Layers
-        <span className="rounded-full border border-white/10 bg-black/30 px-2 py-0.5 font-mono text-[0.65rem] text-white/80">
+        <span className="rounded-full border border-white/10 bg-black/30 px-1.5 py-0.5 sm:px-2 font-mono text-[0.55rem] sm:text-[0.65rem] text-white/80">
           {activeCount}/{totalCount}
         </span>
       </button>
 
       {isOpen && (
-        <div className="hidden sm:block" role="dialog" aria-modal="true" aria-labelledby="layer-controls-title">
+        <div className="hidden sm:block">
           <div className="absolute right-0 top-full z-40 mt-2 w-80 rounded-xl border border-white/10 bg-black/85 p-4 shadow-xl backdrop-blur">
             <div className="mb-3 flex items-center justify-between">
-              <h3 id="layer-controls-title" className="text-sm font-semibold text-white">Layer Controls</h3>
+              <h3 className="text-sm font-semibold text-white">Layer Controls</h3>
               <div className="flex gap-2 text-[0.65rem]">
                 <button
                   onClick={handleSelectAll}
                   className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-white transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/40"
-                  aria-label="Select all layers"
                 >
                   All
                 </button>
                 <button
                   onClick={handleSelectNone}
                   className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-white transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/40"
-                  aria-label="Deselect all layers"
                 >
                   None
                 </button>
@@ -276,36 +258,35 @@ export default function LayerControl({ heroRef }: LayerControlProps) {
           <div
             className="fixed inset-0 z-40 bg-black/80 backdrop-blur"
             onClick={() => setIsOpen(false)}
-            aria-hidden="true"
           />
-          <div className="fixed inset-x-4 bottom-8 z-50 max-h-[75vh] overflow-y-auto rounded-2xl border border-white/20 bg-black/90 p-4 shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="layer-controls-title-mobile">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 id="layer-controls-title-mobile" className="text-base font-semibold text-white">Layer Controls</h3>
+          <div className="fixed inset-x-4 top-[calc(env(safe-area-inset-top,0px)+1rem)] bottom-[calc(env(safe-area-inset-bottom,0px)+1rem)] z-50 flex flex-col rounded-2xl border border-white/20 bg-black/90 shadow-2xl">
+            <div className="flex-shrink-0 flex items-center justify-between border-b border-white/10 px-3 py-2">
+              <h3 className="text-sm font-semibold text-white">Layer Controls</h3>
               <button
                 onClick={() => setIsOpen(false)}
-                className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-sm text-white transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/40"
+                className="rounded-full border border-white/20 bg-white/10 px-2 py-1 text-xs text-white transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/40"
                 aria-label="Close layer controls"
               >
-                Close
+                ✕
               </button>
             </div>
-            <div className="mb-4 flex items-center gap-2">
+            <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2 border-b border-white/10">
               <button
                 onClick={handleSelectAll}
-                className="flex-1 rounded-full border border-white/20 bg-white/10 px-3 py-2 text-sm text-white transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/40"
-                aria-label="Select all layers"
+                className="flex-1 rounded-full border border-white/20 bg-white/10 px-2 py-1.5 text-xs text-white transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/40"
               >
-                Select All
+                All
               </button>
               <button
                 onClick={handleSelectNone}
-                className="flex-1 rounded-full border border-white/20 bg-white/10 px-3 py-2 text-sm text-white transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/40"
-                aria-label="Deselect all layers"
+                className="flex-1 rounded-full border border-white/20 bg-white/10 px-2 py-1.5 text-xs text-white transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/40"
               >
-                Select None
+                None
               </button>
             </div>
-            {renderGroupControls()}
+            <div className="flex-1 overflow-y-auto px-2 py-2">
+              {renderGroupControls()}
+            </div>
           </div>
         </div>
       )}

@@ -19,6 +19,28 @@ fi
 echo "🧪 Running unit/integration tests..."
 npm run -s test
 
+# Hydration error check (before build to catch issues early)
+# Skip if Playwright browsers not installed (graceful degradation)
+if [ "${SKIP_HYDRATION_CHECK:-0}" != "1" ]; then
+  echo "🔍 Checking for hydration errors..."
+  if npm run check:hydration 2>&1 | tee /tmp/hydration-check.log; then
+    echo "✅ Hydration check passed"
+  else
+    EXIT_CODE=$?
+    if grep -q "Executable doesn't exist\|browserType.launch" /tmp/hydration-check.log 2>/dev/null; then
+      echo "⚠️  Playwright browsers not installed. Skipping hydration check."
+      echo "   Install browsers: npx playwright install chromium"
+      echo "   Or skip explicitly: SKIP_HYDRATION_CHECK=1"
+    else
+      echo "❌ Hydration check failed. Review errors above."
+      echo "   To skip hydration check: SKIP_HYDRATION_CHECK=1"
+      exit $EXIT_CODE
+    fi
+  fi
+else
+  echo "ℹ️  Skipping hydration check (SKIP_HYDRATION_CHECK=1)."
+fi
+
 # Build check
 echo "🏗️  Building production bundle..."
 npm run -s build

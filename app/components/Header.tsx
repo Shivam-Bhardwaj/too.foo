@@ -83,23 +83,21 @@ export default function Header({
 
   return (
     <header
-      className="fixed inset-x-0 top-0 z-30 pointer-events-none"
-      style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)' }}
-      role="banner"
+      className="fixed inset-x-0 header-below-nav z-30 pointer-events-none"
+      style={{ paddingTop: '0.25rem' }}
     >
-      <div className="px-3 sm:px-4 lg:px-6">
+      <div className="px-2 sm:px-4 lg:px-6">
         <div className="mx-auto max-w-6xl">
-          <div className="pointer-events-auto rounded-2xl border border-white/10 bg-black/70 backdrop-blur-md px-3 py-3 sm:px-4 sm:py-4">
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-                <div className="flex items-center gap-2 text-white">
+          <div className="pointer-events-auto rounded-xl sm:rounded-2xl border border-white/10 bg-black/70 backdrop-blur-md px-2 py-1.5 sm:px-4 sm:py-4">
+            <div className="flex flex-col gap-1.5 sm:gap-3">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-4">
+                <div className="flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 text-white">
                   <svg
                     width="32"
                     height="32"
                     viewBox="0 0 100 100"
-                    className="h-7 w-7 sm:h-6 sm:w-6"
-                    aria-hidden="true"
-                    role="img"
+                    className="h-5 w-5 sm:h-6 sm:w-6"
+                    aria-label="Solar icon"
                   >
                     <defs>
                       <radialGradient id="sunGradient" cx="50%" cy="50%" r="50%">
@@ -137,11 +135,11 @@ export default function Header({
                       );
                     })}
                   </svg>
-                  <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-2">
-                    <p className="text-[0.55rem] uppercase tracking-[0.35em] text-emerald-300/60">
+                  <div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
+                    <p className="text-[0.5rem] uppercase tracking-[0.3em] text-emerald-300/60 sm:text-[0.55rem] sm:tracking-[0.35em]">
                       too.foo mission
                     </p>
-                    <h2 className="text-base font-light sm:text-sm">Solar Memory Console</h2>
+                    <p className="text-sm font-light sm:text-base sm:text-sm">Solar Memory Console</p>
                   </div>
                 </div>
 
@@ -160,18 +158,11 @@ export default function Header({
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-1.5 sm:hidden">
-                {MISSION_STATS.map((stat) => (
-                  <span key={stat.label} className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[0.55rem] text-white/70">
-                    <span className="uppercase tracking-[0.25em] text-white/50">{stat.label}</span>
-                    <span className="font-mono text-white/80">{stat.value}</span>
-                  </span>
-                ))}
-              </div>
-
-              <div className="flex flex-col gap-1 text-[0.6rem] font-mono text-emerald-200/80 sm:hidden">
-                <span>UTC · {utcTime || '—'}</span>
-                <span className="text-white/60">Solar Date · {formatDate(currentYear)}</span>
+              {/* Compact UTC/Date on mobile - centered */}
+              <div className="flex items-center justify-center gap-2 text-[0.55rem] font-mono text-emerald-200/80 sm:hidden">
+                <span className="text-white/60">{formatDate(currentYear)}</span>
+                <span className="text-white/30">·</span>
+                <span className="text-white/70">{utcTime ? new Date(utcTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '—'}</span>
               </div>
 
               <Controls
@@ -182,9 +173,10 @@ export default function Header({
                 onPauseChange={onPauseChange}
               />
 
-              <div className="flex flex-wrap items-center gap-2 border-t border-white/10 pt-2 sm:items-center sm:gap-3 sm:pt-3">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 border-t border-white/10 pt-1.5 sm:items-center sm:gap-3 sm:pt-3">
                 <LayerControl heroRef={heroRef} />
-                <div className="flex flex-wrap items-center gap-1 text-[0.5rem] uppercase tracking-[0.25em] text-white/40 sm:ml-auto">
+                {/* Hide git info on mobile to save space */}
+                <div className="hidden sm:flex flex-wrap items-center gap-1 text-[0.5rem] uppercase tracking-[0.25em] text-white/40 sm:ml-auto">
                   <span>Branch</span>
                   <span className="font-mono text-white/60">{gitInfo.branch}</span>
                   <span className="text-white/20">•</span>

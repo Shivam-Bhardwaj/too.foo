@@ -1,5 +1,24 @@
 import type { Metadata } from 'next';
-import ClientWrapper from './components/ClientWrapper';
+import dynamic from 'next/dynamic';
+
+// Make entire page client-only to prevent all hydration errors
+// This page relies on browser APIs and client-side state
+const HomePageClient = dynamic(
+  () => import('./HomePageClient'),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="mb-4">
+            <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-cyan-400 border-r-transparent"></div>
+          </div>
+          <p className="text-xl">Loading...</p>
+        </div>
+      </div>
+    ),
+  }
+);
 
 export const metadata: Metadata = {
   title: 'too.foo — Solar Memory Online',
@@ -17,37 +36,9 @@ export const metadata: Metadata = {
   },
 };
 
+// Note: With static export (output: 'export'), we can't use 'export const dynamic'
+// Instead, we rely on dynamic() imports with ssr: false to prevent SSR
+// The page will be statically generated as an empty shell that loads client components
 export default function Home() {
-  return (
-    <div className="min-h-screen bg-black text-white flex flex-col" style={{ minHeight: 'var(--viewport-height, 100vh)' }}>
-      <div
-        className="fixed inset-0 pointer-events-none z-0"
-        style={{
-          background:
-            'radial-gradient(circle at center, transparent 0%, rgba(0, 0, 0, 0.2) 80%, rgba(0, 0, 0, 0.4) 100%)',
-        }}
-        aria-hidden="true"
-      />
-
-      <main id="main-content" className="relative flex-1" style={{ minHeight: 'var(--viewport-height, 100vh)' }}>
-        <ClientWrapper />
-
-        <noscript>
-          <img
-            src="/img/heliosphere-still.png"
-            alt="Stylized, scientifically-informed heliosphere; apex direction implied."
-            className="absolute inset-0 w-full h-full object-cover opacity-50 z-0"
-          />
-        </noscript>
-
-        <div className="absolute inset-x-4 sm:left-1/2 sm:-translate-x-1/2 bottom-[calc(env(safe-area-inset-bottom,0px)+5rem)] sm:bottom-32 z-20 pointer-events-none">
-          <h1 className="sr-only">too.foo — Solar Memory Online</h1>
-          <p className="text-base md:text-xl lg:text-2xl text-white/80 max-w-2xl mx-auto text-center drop-shadow-md">
-            Uploading before GTA 6. Learning the tech and philosophy to encode our planet's DNA.
-          </p>
-        </div>
-        <p className="sr-only">Illustrative; not to scale.</p>
-      </main>
-    </div>
-  );
+  return <HomePageClient />;
 }

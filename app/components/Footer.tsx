@@ -14,14 +14,14 @@ export default function Footer() {
   return (
     <footer
       className="fixed inset-x-0 bottom-0 z-20 pointer-events-none"
-      style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)' }}
-      role="contentinfo"
+      style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.5rem)' }}
     >
-      <div className="px-3 sm:px-4 lg:px-6">
+      <div className="px-2 sm:px-4 lg:px-6">
         <div className="mx-auto max-w-6xl">
-          <div className="pointer-events-auto rounded-2xl border border-white/10 bg-black/55 backdrop-blur px-3 py-2 sm:px-4 sm:py-3">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-              <div className="flex flex-col gap-1">
+          <div className="pointer-events-auto rounded-xl sm:rounded-2xl border border-white/10 bg-black/55 backdrop-blur px-2 py-1 sm:px-4 sm:py-3">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+              {/* Hide tech stack on mobile to maximize screen space */}
+              <div className="hidden sm:flex flex-col gap-1">
                 <span className="text-[0.5rem] uppercase tracking-[0.35em] text-white/40">
                   Tech Stack
                 </span>
@@ -32,9 +32,8 @@ export default function Footer() {
                       href={tech.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="group inline-flex items-baseline gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-white/70 transition-colors hover:border-white/20 hover:bg-white/15 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/40"
+                      className="group inline-flex items-baseline gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-white/70 transition-colors hover:border-white/20 hover:bg-white/15 hover:text-white"
                       title={`${tech.name} v${tech.version}`}
-                      aria-label={`${tech.name} version ${tech.version} - Opens in new tab`}
                     >
                       <span className="text-[0.6rem] font-medium group-hover:text-white">
                         {tech.name}
@@ -47,9 +46,11 @@ export default function Footer() {
                 </div>
               </div>
 
-              <div className="text-[0.5rem] uppercase tracking-[0.3em] text-white/30 sm:text-right">
-                <div>AGPL-3.0-or-later</div>
-                <div>TooFoo Continuum License v0.1</div>
+              {/* Compact license on mobile */}
+              <div className="text-[0.45rem] uppercase tracking-[0.25em] text-white/30 sm:text-[0.5rem] sm:tracking-[0.3em] sm:text-right">
+                <div className="sm:block">AGPL-3.0-or-later</div>
+                <div className="hidden sm:block">TooFoo Continuum License v0.1</div>
+                <div className="sm:hidden">AGPL-3.0</div>
               </div>
             </div>
           </div>
