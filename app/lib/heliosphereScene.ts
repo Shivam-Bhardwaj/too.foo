@@ -894,7 +894,9 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
   voyagerGroup.add(v2Trajectory);
   
   // ===== Label System =====
-  const labelManager = new LabelManager(canvas, camera);
+  // Get or create container for CSS3D labels
+  const container = canvas.parentElement || document.body;
+  const labelManager = new LabelManager(container, camera);
   
   // ===== Interstellar Objects =====
   const interstellarObjectsGroup = new THREE.Group();
@@ -1174,6 +1176,21 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
     planetsGroup.add(mesh);
     planetMeshes[name] = mesh;
     
+    // Add marker ring around each planet for visibility at distance
+    const markerRingGeo = new THREE.RingGeometry(0.12, 0.14, 32);
+    const markerRingMat = new THREE.MeshBasicMaterial({
+      color: color,
+      transparent: true,
+      opacity: 0.5,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    const markerRing = new THREE.Mesh(markerRingGeo, markerRingMat);
+    markerRing.name = name + 'Marker';
+    markerRing.rotation.x = Math.PI / 2; // Face up initially
+    mesh.add(markerRing); // Add to planet so it follows it
+    
     // Store Earth reference for Moon
     if (name === "Earth") {
       earthMeshRef.current = mesh;
@@ -1261,6 +1278,14 @@ export function createScene(canvas: HTMLCanvasElement, options?: SceneOptions): 
       // base ecliptic (x,0,z), then tilt
       mesh.position.set(Math.cos(theta) * R, 0, Math.sin(theta) * R);
       mesh.position.applyAxisAngle(Z_AXIS, ECLIPTIC_TILT);
+      
+      // Make marker ring face camera (billboard effect)
+      const markerRing = mesh.getObjectByName(name + 'Marker');
+      if (markerRing) {
+        const worldPos = new THREE.Vector3();
+        mesh.getWorldPosition(worldPos);
+        markerRing.lookAt(camera.position);
+      }
       
       // Store Earth position for Moon
       if (name === "Earth") {
